@@ -367,6 +367,59 @@ body{
   .eg .nb{font-size:14px}
 }
 
+/* ===== v4：工具页（BMI / TDEE / 劳动强度 / 七大营养素） ===== */
+.h2{margin:2px 0 6px;font-size:19px;font-weight:800;letter-spacing:.2px}
+.lead{margin:0 0 12px;color:#a7b1c2;font-size:13.5px;line-height:1.7}
+.calc{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.crow{display:flex;align-items:center;gap:8px;background:#0e1420;border:1px solid #1e2836;border-radius:12px;padding:9px 11px}
+.crow.full{grid-column:1/-1}
+.crow span{color:#98a3b3;font-size:12.5px;min-width:44px}
+.crow input{flex:1;min-width:0;background:transparent;border:0;color:#e9eef7;font-size:16px;font-weight:700;outline:none;font-variant-numeric:tabular-nums}
+.crow i{color:#7b8697;font-size:12px;font-style:normal}
+.crow select{flex:1;min-width:0;background:#0e1420;border:1px solid #223041;border-radius:9px;color:#dbe3ef;font-size:13px;padding:6px 8px;outline:none}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;background:#131b28;border:1px solid #223041;color:#9aa6b7;border-radius:9px;padding:7px 0;font-size:13.5px;font-weight:700;cursor:pointer}
+.seg button.on{background:linear-gradient(180deg,#2f6fe4,#2257bf);border-color:#3b7bf0;color:#fff}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.kpi{background:#0e1420;border:1px solid #1e2836;border-radius:12px;padding:10px 11px;display:flex;flex-direction:column;gap:2px}
+.kpi .kk{color:#8b97a8;font-size:11.5px}
+.kpi b{font-size:21px;font-weight:800;color:#eef3fb;font-variant-numeric:tabular-nums}
+.kpi .kv{color:#8b97a8;font-size:11.5px}
+.goals{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.goal{position:relative;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.01));border:1px solid #1e2836;border-radius:13px;padding:11px 12px;overflow:hidden}
+.goal:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--gc,#4ade80)}
+.goal .gk{color:var(--gc,#4ade80);font-size:12.5px;font-weight:800}
+.goal .gv{font-size:23px;font-weight:800;color:#eef3fb;font-variant-numeric:tabular-nums}
+.goal .gv span{font-size:11.5px;color:#8b97a8;font-weight:600;margin-left:3px}
+.goal .gs{color:#9aa6b7;font-size:11.5px;line-height:1.5}
+.goal .gm{margin-top:6px;color:#c9d4e3;font-size:12px;line-height:1.55}
+.jobs{display:grid;gap:10px}
+.job{background:#0e1420;border:1px solid #1e2836;border-left:3px solid var(--jc,#4ade80);border-radius:12px;padding:11px 12px}
+.job .jk{color:var(--jc,#4ade80);font-size:13.5px;font-weight:800;display:flex;justify-content:space-between;align-items:baseline}
+.job .jk em{color:#8b97a8;font-size:11.5px;font-style:normal;font-weight:600}
+.job .jl{margin-top:4px;color:#cfd8e5;font-size:12.5px;line-height:1.65}
+.job .jt{margin-top:5px;color:#8b97a8;font-size:12px;line-height:1.6}
+.nuts{display:grid;gap:1px;background:#1e2836;border:1px solid #1e2836;border-radius:12px;overflow:hidden}
+.nrow{background:#0e1420;padding:10px 12px}
+.nrow .nn{color:#eef3fb;font-size:13.5px;font-weight:800;display:flex;align-items:center;gap:8px}
+.nrow .nr{color:#7dd3fc;font-size:11.5px;margin-top:1px}
+.nrow .nd{color:#c3cddb;font-size:12.5px;line-height:1.6;margin-top:3px}
+.nrow .nk{color:#94a3b8;font-size:11.5px;line-height:1.55;margin-top:3px}
+.ev{padding:1px 7px;border-radius:999px;font-size:10.5px;font-weight:800;border:1px solid transparent}
+.ev.eA{color:#4ade80;background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.4)}
+.ev.eB{color:#7dd3fc;background:rgba(125,211,252,.12);border-color:rgba(125,211,252,.4)}
+.ev.eC{color:#facc15;background:rgba(250,204,21,.12);border-color:rgba(250,204,21,.4)}
+@media (max-width:560px){
+  .calc{grid-template-columns:1fr}
+  .kpis{grid-template-columns:1fr 1fr}
+  .goals{grid-template-columns:1fr}
+  .h2{font-size:17px}
+}
+
+/* 修正：性别分段按钮在 .crow 里要撑满 */
+.crow .seg{flex:1;min-width:0}
+.seg button{min-width:0;white-space:nowrap}
+
 </style>
 </head>
 <body>
@@ -380,6 +433,7 @@ body{
     <button class="tab" data-act="tab" data-tab="study">学习</button>
     <button class="tab" data-act="tab" data-tab="lib">卡片库</button>
     <button class="tab" data-act="tab" data-tab="skim">速览</button>
+    <button class="tab" data-act="tab" data-tab="tools">工具</button>
     <button class="tab" data-act="tab" data-tab="stats">数据</button>
   </nav>
 </header>
@@ -475,6 +529,24 @@ window.CARDS = (window.CARDS || []).concat([
 {id:"nut-22",s:"营养",lv:3,t:"训练日与休息日的微调",b:"一个简单做法：训练日碳水高一些（+30–50 g），休息日略低、蛋白和蔬菜不变。不必做「碳水循环」这种复杂操作，先把蛋白和总热量稳住。对多数人而言，一周总量比单日差值更重要。",p:["训练日多吃点主食，休息日少一点，蛋白恒定","别用「休息日」当放纵日","一周平均热量决定体重趋势"],m:"休息日觉得「该犒劳自己」，一顿吃掉三天的缺口。",q:{a:"训练日与休息日营养微调，最该保持不变的是？",o:["蛋白摄入量","碳水必须完全不吃","总热量必须一样"],i:0,w:"蛋白是保肌核心，应保持稳定；碳水可随训练量小幅浮动。"}},
 {id:"nut-23",s:"营养",lv:3,t:"依从性：80/20 法则",b:"能坚持 80% 的方案，胜过完美但坚持三天的方案。做法：固定 3–4 个「默认餐」降低决策成本，允许每周 2–3 次弹性进食，记录但不苛责。减脂失败最常见的原因不是知识不足，是方案不可持续。",p:["先设计一个「忙的时候也能做到」的最低版本","外食/聚餐提前留出热量预算","一周 80% 到位就够了，剩下 20% 是生活"],m:"追求 100% 完美饮食，第五天就放弃，然后自责半个月。",q:{a:"长期饮食成功最关键的因素是？",o:["方案足够严格","方案能长期坚持","每天称重 10 次"],i:1,w:"依从性决定结果，过度严苛的方案往往难以维持。"}},
 {id:"nut-24",s:"营养",lv:3,t:"什么时候该找专业人士",b:"以下情况建议找注册营养师或医生：不明原因体重骤变、长期胃肠症状、进食障碍倾向（暴食/催吐/极端限制）、慢性病（糖尿病、肾病、甲状腺）、备孕/孕期、青少年运动员。网络内容只能做科普，不能替代个体化诊疗。",p:["有基础疾病时，饮食方案必须个体化","出现暴食-补偿循环，越早求助越好","本卡内容为一般性科普，不构成医疗建议"],m:"拿着网上的「万能食谱」给自己治病，耽误了正规治疗。",q:{a:"以下哪种情况最应该寻求专业营养指导？",o:["想知道晚餐吃什么","有糖尿病并准备调整饮食","想多吃点蔬菜"],i:1,w:"慢性病需要个体化营养方案，网络科普不能替代诊疗。"}}
+]);
+
+window.CARDS = (window.CARDS || []).concat([
+/* ===== 营养 L1 基础（续） ===== */
+{id:"nut-25",s:"营养",lv:1,t:"膳食指南的八条，其实是四件事",b:"《中国居民膳食指南（2022）》八条准则，归纳起来就四件事：吃够多样（每天 12 种、每周 25 种以上食物）、吃对比例（谷类为主、多蔬果奶豆）、控住三白（油 25–30 克、盐 <5 克、添加糖 <25 克）、动起来（每周 5 天中等强度活动）。记住这四句，比背八条更有用。指南每 5 年左右更新一次，是可核查的公共权威（证据 A）。",p:["食物多样是第一条，也是最容易被忽略的一条","油盐糖是国人超标最狠的三项，先管它们收益最大","指南给的是人群范围，个体还要按体重和活动量微调"],m:"把指南当成「必须精确到克」的食谱，于是第一天就放弃。它给的是区间，不是考试答案。",q:{a:"中国居民膳食指南（2022）里，成人每天烹调油和盐的建议是？",o:["油 25–30 克、盐 <5 克","油 50 克、盐 10 克","油越少越好、盐随便"],i:0,w:"油 25–30 克、盐 <5 克是 2022 版明确写的上限，也是国人最容易超标的两项。"}},
+{id:"nut-26",s:"营养",lv:1,t:"三大营养素供能比：50 / 15 / 25",b:"膳食指南给成人的供能比区间：碳水 50%–65%、蛋白质 10%–20%、脂肪 20%–30%。换算成克：碳水每克 4 千卡、蛋白每克 4 千卡、脂肪每克 9 千卡。以每天 2000 千卡为例，碳水约 250–325 克、蛋白 50–100 克、脂肪 45–65 克。训练量大的人可以把蛋白往上限推，但碳水和脂肪不建议长期压到区间外（证据 A）。",p:["先定总热量，再谈比例；顺序反了吃再多蛋白也没用","脂肪每克 9 千卡，是碳水和蛋白的两倍多，最容易吃超","蛋白吃得多不等于长肌肉，要看训练和总热量"],m:"以为「高蛋白」就是多吃肉，结果总热量爆表，脂肪照长。",q:{a:"同样 1 克，哪种营养素提供的热量最高？",o:["碳水化合物","蛋白质","脂肪"],i:2,w:"脂肪 9 千卡/克，碳水和蛋白都是 4 千卡/克，所以油和坚果最容易吃超。"}},
+{id:"nut-27",s:"营养",lv:1,t:"七大营养素各自管什么",b:"碳水＝主要燃料，管力气和脑子；蛋白＝建材，管肌肉、免疫、酶；脂肪＝结构＋激素原料＋脂溶性维生素的载体；维生素＝反应里的小钥匙，量少但不能缺；矿物质＝骨骼、神经、氧运输（钙铁锌碘硒）；水＝一切反应的介质、体温调节；膳食纤维＝喂肠道菌、稳血糖、通便。前三个供能，后四个「不供能但缺了就出问题」（证据 A/B）。",p:["供能三兄弟管「够不够」，其余四个管「顺不顺」","蔬菜水果提供的主要是后四个，不是热量","只盯着热量的人，常常缺纤维、钾、镁、维生素"],m:"把蔬菜水果当成「可有可无的配角」，热量够了但微量营养素长期欠账。",q:{a:"下面哪一组全部都是「不提供热量但缺了会出问题」的营养素？",o:["碳水、蛋白、脂肪","维生素、矿物质、水、膳食纤维","糖、油、盐"],i:1,w:"维生素、矿物质、水和膳食纤维不供能，但参与代谢、结构和调节，长期不足会出问题。"}},
+{id:"nut-28",s:"营养",lv:1,t:"每天吃多少：手掌和拳头就够了",b:"不用厨房秤也能估份量：一个手掌大小的肉/鱼≈100 克蛋白类；一个拳头的主食≈100 克熟米饭；两手捧的蔬菜≈200 克；一个拇指的油≈10 克。指南建议每天：谷类 200–300 克（其中全谷杂豆 50–150 克）、蔬菜 300–500 克、水果 200–350 克、奶 300 毫升、大豆坚果适量、鱼禽蛋肉合计 120–200 克。",p:["先保证蔬菜和蛋白到位，主食按体重目标调","水果不能替代蔬菜，糖分和纤维结构都不同","奶和豆制品是国人钙的主要来源，别省"],m:"只吃菜不吃主食，短期掉秤快，掉的多是水分和糖原，恢复吃就反弹。",q:{a:"用「手掌法」估份量时，一个手掌大小的肉大约是多少克？",o:["约 30 克","约 100 克","约 300 克"],i:1,w:"一个手掌（不含手指）大小的肉/鱼/禽约 100 克，是很好用的份量锚点。"}},
+/* ===== 营养 L2 结构 ===== */
+{id:"nut-29",s:"营养",lv:2,t:"碳水看质量：全谷物和杂豆",b:"同样 100 克碳水，来自白米饭和来自燕麦、糙米、红豆的，血糖反应和饱腹感差很多。指南建议全谷物和杂豆 50–150 克/天，大约占主食的三分之一。做法很简单：白米里掺三分之一糙米/燕麦/藜麦，或用杂豆替换一部分。膳食纤维 25–30 克/天的目标，靠这个就能完成大半（证据 A）。",p:["主食不是敌人，精制主食吃太多才是问题","把「掺」当成习惯，比彻底换主食容易坚持","土豆、山药、玉米算主食，吃了要减米饭"],m:"以为「不吃主食能瘦」，结果训练没劲、情绪差，还容易暴食。",q:{a:"想提高主食质量，最实际的第一步是？",o:["完全不吃米饭","白米里掺三分之一全谷物或杂豆","只吃水果代替主食"],i:1,w:"掺着吃既能提高纤维和微量营养素，又不用改变饮食习惯，是可持续的做法。"}},
+{id:"nut-30",s:"营养",lv:2,t:"蛋白吃多少：按体重算",b:"普通成人 1.0–1.2 克/公斤体重；减脂期保持 1.6 克左右可以保住肌肉；力量训练增肌 1.6–2.2 克/公斤；65 岁以上建议不低于 1.0–1.2 克/公斤以防肌少。体重超标的人按「理想体重」算更合理。分配上每餐 20–40 克比一顿吃完全天更有效（证据 A/B）。",p:["60 公斤的人，一天 60–72 克蛋白是普通水平","一餐 20–40 克，分 3–4 餐比集中一顿好","植物蛋白也能算，但要注意氨基酸互补"],m:"把蛋白粉当成必需品，其实鸡蛋、牛奶、鱼、豆制品完全够用，还更便宜。",q:{a:"一个 70 公斤、正在增肌的人，每天蛋白的合理范围大约是？",o:["40–50 克","112–154 克","250 克以上"],i:1,w:"按 1.6–2.2 克/公斤算，70 公斤就是 112–154 克，靠正常三餐加一份加餐完全能达到。"}},
+{id:"nut-31",s:"营养",lv:2,t:"脂肪：看种类，也看总量",b:"脂肪供能比 20%–30%，烹调油 25–30 克/天，饱和脂肪 <10% 供能。做法：多用植物油（菜籽、花生、橄榄轮换），少吃猪油黄油和油炸；每周吃两次鱼（深海鱼提供 omega-3）；坚果一小把（约 15 克）就够，多了热量很猛。反式脂肪（部分氢化油、反复高温炸的油）尽量为零（证据 A）。",p:["油是液态还是固态，大致能判断饱和脂肪多少","坚果是「一口就超标」的食物，按小把算","看配料表出现「氢化」「植脂末」就绕开"],m:"觉得「吃脂肪长脂肪」，于是零脂饮食，结果激素紊乱、皮肤差、脂溶性维生素吸收不良。",q:{a:"下面哪种做法最符合「脂肪吃对」？",o:["完全不吃油","烹调油 25–30 克并轮换植物油，每周吃鱼","多吃坚果代替正餐"],i:1,w:"总量控制在 25–30 克并注意种类（多不饱和、少饱和、零反式），比极端零脂更健康。"}},
+{id:"nut-32",s:"营养",lv:2,t:"国人最容易缺的几样微量营养素",b:"按膳食调查，中国居民容易不足的是：钙（奶豆不足）、铁（女性尤其）、维生素 D（日照不足）、碘（内陆非碘盐地区）、叶酸（备孕女性）。对策很朴素：每天 300 毫升奶、每周吃一次动物肝或血（铁）、每天晒 15–20 分钟太阳、用碘盐、多吃深绿色叶菜。维生素补充剂不是必需，先补饮食缺口（证据 A/B）。",p:["先看饮食结构缺什么，再考虑补剂，别反着来","维生素 D 主要靠日照，室内工作的人普遍偏低","钙的吸收需要维生素 D，两者要一起看"],m:"一把维生素片全吃，饮食照旧，结果该缺的还是缺。",q:{a:"中国居民膳食调查中，摄入普遍不足的矿物质主要是？",o:["钙","钠","磷"],i:0,w:"奶类豆制品摄入不足，钙是最普遍的缺口；钠反而是普遍超标。"}},
+/* ===== 营养 L3 应用 ===== */
+{id:"nut-33",s:"营养",lv:3,t:"劳动强度决定你的热量档位",b:"同样 70 公斤，坐办公室的人和搬货的人，一天能差 800–1000 千卡。中国 DRIs 按体力活动水平（PAL）分三级：轻体力 1.5、中体力 1.75、重体力 2.0（男性参考值，女性略低），对应职业差别很大。选错档位，是「照食谱吃却不见效」最常见的原因（证据 B）。",p:["先给自己的职业定档，再算热量，顺序不能反","「上班坐着 + 每天训练 1 小时」按轻体力再单独加训练消耗","换工作、换通勤方式，热量需求会一起变"],m:"照搬健身博主的 3000 千卡，结果自己是坐办公室的，一个月胖三斤。",q:{a:"体力活动水平（PAL）里，办公室职员的典型档位是？",o:["轻体力，约 1.5","中体力，约 1.75","重体力，约 2.0"],i:0,w:"久坐办公属于轻体力活动，PAL 约 1.5；中体力 1.75、重体力 2.0 是更高档。"}},
+{id:"nut-34",s:"营养",lv:3,t:"职业对照：你属于哪一档",b:"轻体力：办公室、程序员、教师、医生、会计、司机、客服、店员、保安（坐岗）。中体力：护士、销售外勤、餐厅服务员、幼师、护理员、巡检工、快递分拣、保洁。重体力：建筑工、搬运装卸、农民、矿工、伐木、渔业。竞技运动员训练日接近极重档。不确定就选低一档，再用两周体重变化校正（证据 B）。",p:["职业定档只是起点，体重变化才是最终裁判","连续两周体重稳定，说明热量估得基本对","「兼职体力活」按占比折算，别一步跨两档"],m:"只看职业不看实际活动量：同样是教师，体育老师和坐班老师差得远。",q:{a:"下面哪个职业更接近「中体力」档？",o:["办公室程序员","餐厅服务员","建筑搬运工"],i:1,w:"服务员整天站立走动属于中体力；程序员是轻体力，搬运工是重体力。"}},
+{id:"nut-35",s:"营养",lv:3,t:"算热量的四步法",b:"第一步：算基础代谢（Mifflin-St Jeor：男 10×体重+6.25×身高−5×年龄+5；女同式 −161）。第二步：乘活动系数（久坐 1.2、轻 1.375、中 1.55、重 1.725、极重 1.9）得到维持热量。第三步：按目标加减——减脂减 15%–20%（约 300–500 千卡）、增肌加 10%–15%（约 200–300 千卡）。第四步：把总热量按 50/15/25 分给碳水、蛋白、脂肪（证据 B，估算误差约 ±10%）。",p:["公式只是起点，两周体重数据才是校准器","减脂别低于基础代谢太多，容易掉肌肉、掉精神","先把总热量做对，再优化营养素比例"],m:"算出一个数字就当铁律，一周没变化就以为「代谢坏了」，其实只是估算误差。",q:{a:"算完维持热量后，减脂期通常建议怎么调整？",o:["直接砍掉一半热量","下调 15%–20%，约 300–500 千卡","不减热量，只做有氧"],i:1,w:"温和缺口 300–500 千卡既能减脂又能保住肌肉和精力，砍一半往往坚持不下来。"}},
+{id:"nut-36",s:"营养",lv:3,t:"十条能立刻照做的小建议",b:"一、每餐先吃蔬菜和蛋白，最后吃主食。二、每天 300 毫升奶。三、油按 25–30 克，用带刻度的油壶。四、盐 <5 克，少吃酱料和腌制品。五、添加糖 <25 克，含糖饮料换白水。六、每周两次鱼。七、坚果一小把，不超过 15 克。八、主食掺三分之一粗粮。九、每天 1500–1700 毫升水。十、每周量一次体重和腰围，用数据代替感觉（证据 A/B）。",p:["先选三条最容易做到的，做两周再加","改环境比靠意志力有效：家里不囤零食，油壶带刻度","腰围比体重更能反映内脏脂肪，男性 <90 厘米、女性 <85 厘米"],m:"一次改十件事，第三天全线崩盘，然后认定「我做不到」。",q:{a:"想长期改好饮食，最有效的起点是？",o:["一次改掉全部坏习惯","先挑 2–3 条最容易的，坚持两周再加","等到意志力最强的那天"],i:1,w:"小步改、能坚持、再加码，比一次性大改的成功率高得多。"}}
 ]);
 
 window.CARDS = (window.CARDS || []).concat([
@@ -823,11 +895,14 @@ window.HOOK = {
 };
 
 /* 内容版本与更新记录：改内容时同步改这里（v 版本号、d 日期） */
-window.VER = { v: "2026.12", d: "2026-11-24" };
+window.VER = { v: "2026.13", d: "2026-11-24" };
 window.UPDLOG = [
+  { d: "2026-11-24", v: "2026.13", t: "营养科扩到 36 张 + 新增「工具」页", b: "膳食指南供能比、七大营养素、劳动强度分档与职业对照、算热量四步法；工具页可算 BMI / 基础代谢 / 维持热量 / 三大营养素克数。" },
   { d: "2026-11-24", v: "2026.12", t: "每张卡补例子 + 新手第一步", b: "120 张卡各加了一段带数字的生活化例子（举个例子）和一句可执行的新手做法（新手先这样），零基础也能看懂。" },
   { d: "2026-11-24", v: "2026.11", t: "首版 120 张", b: "五科各 24 张：健身、拳击、营养、解剖、儿童青少年（0-18 分龄）。全部标注证据等级 A/B/C，30 张必会卡，10 条前沿速递。" }
 ];
+
+window.EVID = Object.assign(window.EVID, {"nut-25":["A","《中国居民膳食指南（2022）》八条准则"],"nut-26":["A","指南三大营养素供能比区间"],"nut-27":["A","营养素功能与《中国居民膳食营养素参考摄入量（2023）》"],"nut-28":["B","指南各类食物推荐量 + 手掌估量法"],"nut-29":["A","全谷物与膳食纤维摄入建议"],"nut-30":["A","成人蛋白推荐量 + 力量训练 1.6–2.2 g/kg 共识"],"nut-31":["A","烹调油、饱和脂肪与反式脂肪建议"],"nut-32":["B","中国居民营养与慢性病状况报告（2020）常见不足营养素"],"nut-33":["B","DRIs 体力活动水平（PAL）分级"],"nut-34":["B","职业体力活动强度对照（PAL 估算）"],"nut-35":["B","Mifflin-St Jeor 公式 + 活动系数，误差约 ±10%"],"nut-36":["A","指南核心建议的可执行清单"]});
 
 window.EX = window.EX || {};
 window.EX["fit-01"] = { e: "同样是深蹲 60 公斤做 8 次，上周做完你喘半天，这周做完还能说句话；下周试 60 公斤 9 次，或 62.5 公斤 8 次——这就是超负荷。让人变强的是这条缓慢上升的线，不是某一天练到吐。", n: "记下重量×次数×组数。下周只改一个数：多加 1 次，或多加 2.5 公斤。" };
@@ -906,6 +981,20 @@ window.EX["nut-21"] = { e: "抽筋常和疲劳、出汗多、钠钾流失有关�
 window.EX["nut-22"] = { e: "训练日碳水多一点、蛋白照常；休息日碳水可以少一点，但蛋白别减。很多人一休息就放开吃，结果一周的缺口两天补回去。", n: "休息日只减主食的一小部分，蛋白和蔬菜保持原量。" };
 window.EX["nut-23"] = { e: "80/20 法则：八成时间按计划吃，两成留给聚餐、甜点、想吃的。盯得太死的人，往往坚持三周就崩，然后反弹更多。能长期执行的「不完美方案」赢过坚持不了的完美方案。", n: "一周给自己留 2–3 次「随便吃」，其余时间照常，不用有罪恶感。" };
 window.EX["nut-24"] = { e: "该找专业人士的情况：有糖尿病、肾病、进食障碍史；备赛级减重；儿童生长发育问题；长期不明原因体重变化。网上模板不适用于这些情况，硬套可能有害。", n: "有以上任一情况，先找注册营养师或医生，别照抄网上的饮食计划。" };
+
+window.EX = window.EX || {};
+window.EX["nut-25"] = { e: "把八条准则压缩成四件事更好记：吃够多样、吃对比例、控住三白（油盐糖）、动起来。比如你原来早餐只吃白粥咸菜，改成一个鸡蛋加 300 毫升奶加一小把燕麦，就同时完成了「多样」和「少盐」两条。", n: "今晚只做一件事：把家里的盐换成限盐勺（2 克一平勺），一天不超过 2.5 勺。" };
+window.EX["nut-26"] = { e: "2000 千卡的一天：碳水 275 克（约 1100 千卡）、蛋白 75 克（300 千卡）、脂肪 60 克（540 千卡），加起来接近 2000。换成食物就是：三碗米饭约 300 克、鸡蛋两个加鸡胸 150 克加牛奶 300 毫升、烹调油两勺半加一小把坚果。", n: "先在手机上记三天吃了什么，不用精确，只统计「有没有喝含糖饮料、有没有吃油炸」，这两项先砍掉就省 300–500 千卡。" };
+window.EX["nut-27"] = { e: "把七大营养素想成盖房子：碳水是电（供能）、蛋白是砖（建材）、脂肪是保温层和电线套管（结构、激素）、维生素是开关上的小零件、矿物质是钢筋里的关键成分、水是施工用水、纤维是排水管和物业管理（肠道菌）。缺电停工，缺砖塌房，缺零件看着能用但迟早失灵。", n: "对照自己的三餐看一遍：有没有蔬菜（纤维和矿物）、有没有奶或豆（钙）、有没有水果（维生素 C 和钾），缺哪一样明天补上。" };
+window.EX["nut-28"] = { e: "一顿标准餐用手量：一掌肉（100 克）、一拳主食（100 克熟饭）、两捧蔬菜（200 克）、一拇指油（10 克）。这样一顿大约 500–600 千卡，三餐下来 1600–1800 千卡，加一份奶和水果刚好是普通人的维持量。", n: "下一顿饭先按手掌法摆盘再吃，拍张照存下来，这就是你以后的「标准餐模板」。" };
+window.EX["nut-29"] = { e: "同样是 200 克主食：白米饭吃完两小时就饿，糙米饭加红豆能撑到四小时，血糖曲线也更平。做法很土但有效——电饭煲里白米两杯、糙米或燕麦一杯、红豆一小把，一起煮，口感不至于难吃。", n: "买一袋糙米或燕麦片，从「白米 2 : 粗粮 1」开始掺，吃一周再决定要不要加比例。" };
+window.EX["nut-30"] = { e: "70 公斤的人要 112–154 克蛋白：早餐两个鸡蛋加 300 毫升奶约 25 克，午餐 150 克鸡胸约 33 克，晚餐 150 克鱼约 30 克，加餐一杯酸奶约 10 克——加起来 98 克，还差一点，再加一份豆制品就到。", n: "今天数一下自己吃了几份蛋白（蛋、奶、肉、鱼、豆各算一份），多数人只有 2–3 份，目标是 5–6 份。" };
+window.EX["nut-31"] = { e: "一勺油（10 克）就是 90 千卡，炒两个菜放三勺就 270 千卡，还没算食材。所以减脂时「少油」比「少肉」往往更有效：肉 100 克鸡胸 133 千卡，同样重量的五花肉 500 千卡以上。", n: "换个带刻度的油壶或喷油壶，把「倒油」改成「喷油」，一天能省 100–200 千卡。" };
+window.EX["nut-32"] = { e: "一杯 300 毫升牛奶约 300 毫克钙，成人每天需要 800 毫克。不喝奶、不吃豆制品的人，靠青菜和米饭很难补够——这就是为什么「不喝奶的人普遍缺钙」。晒太阳 15–20 分钟能合成维生素 D，隔着玻璃不算。", n: "今天加一盒 300 毫升的牛奶或一杯无糖酸奶，坚持两周，这是成本最低的补钙方案。" };
+window.EX["nut-33"] = { e: "两个都 70 公斤的人：程序员（轻体力，PAL 1.5）维持约 2200 千卡；搬运工（重体力，PAL 2.0）维持约 2900 千卡。差 700 千卡，相当于多吃三碗饭。所以「别人吃这么多不胖」往往只是因为他活动量大。", n: "先按轻体力算一个数（多数人都在这档），连吃两周看体重：不变就是维持量，涨了减 300，掉了加 300。" };
+window.EX["nut-34"] = { e: "同样是「坐着」的职业也有区别：网约车司机基本不动（轻体力偏低），护士一天走一万多步（中体力），餐厅服务员还要端盘子上下楼（中体力偏高）。判断方法很简单——看每天站着走动的累计时长：不足 2 小时偏轻，2–6 小时中等，6 小时以上或常搬重物算重。", n: "在手机健康数据里看今天的步数：连续三天平均低于 6000 步按轻体力，6000–12000 按中体力，超过 12000 或常搬重物按重体力。" };
+window.EX["nut-35"] = { e: "举例：男，30 岁，175 厘米，70 公斤。基础代谢 = 10×70+6.25×175−5×30+5 = 1648 千卡；轻体力×1.375 = 2266 千卡（维持）；减脂 −400 = 约 1866 千卡；按 50/15/25 分：碳水 233 克、蛋白 70 克、脂肪 52 克。", n: "打开数据页的「工具」，把你的身高体重输进去，它会把这几步一次算完，你只要抄数字。" };
+window.EX["nut-36"] = { e: "十条里最划算的三条：先吃菜和蛋白（同样的饭更容易饱）、含糖饮料换白水（一瓶可乐 200 千卡，一天一瓶一年十几斤）、每周量一次腰围（比体重更能反映内脏脂肪）。做完这三条，再谈其他。", n: "今天只选一条写下来贴在冰箱上：比如「先吃菜」，坚持七天再换下一条。" };
 
 window.EX = window.EX || {};
 window.EX["ana-01"] = { e: "解剖学的方位是「以躺着的尸体为基准」：靠近头部是上、靠近脚是下、靠身体中线是内、远离中线是外。所以你的小指在外侧、大拇指在内侧——哪怕你把手举起来，说法也不变。", n: "记四个词：上/下、内/外、前/后。判断时先把手放回解剖位置（掌心朝前）再想。" };
@@ -1236,6 +1325,7 @@ window.EX["kid-24"] = { e: "8–18 岁的 12 周路线可以很朴素：每周 2
     if (view === "study" && sess) app.innerHTML = sess.done ? viewDone() : viewStudy();
     else if (view === "lib") app.innerHTML = viewLib();
     else if (view === "skim") app.innerHTML = viewSkim();
+    else if (view === "tools") app.innerHTML = viewTools();
     else if (view === "stats") app.innerHTML = viewStats();
     else app.innerHTML = viewHome();
     document.querySelectorAll("[data-tab]").forEach(function (b) {
@@ -1488,6 +1578,137 @@ window.EX["kid-24"] = { e: "8–18 岁的 12 周路线可以很朴素：每周 2
     return html;
   }
 
+
+  // ===== 工具页：BMI / TDEE / 配比 / 劳动强度 / 七大营养素 =====
+  var ACTS = [
+    { v: 1.2, t: "久坐（几乎不动，办公室为主）" },
+    { v: 1.375, t: "轻活动（每周 1–3 次运动／常站立）" },
+    { v: 1.55, t: "中活动（每周 3–5 次运动／体力工作）" },
+    { v: 1.725, t: "重活动（每周 6–7 次训练／重体力）" },
+    { v: 1.9, t: "极重（每天两练／搬运装卸等重活）" }
+  ];
+  var JOBS = [
+    { k: "轻体力", pal: "1.5", c: "#4ade80", list: "办公室、程序员、教师、医生、会计、司机、客服、店员、坐岗保安", tip: "久坐职业：每坐 1 小时起来走 3 分钟，日行 6000 步以上算达标。" },
+    { k: "中体力", pal: "1.75", c: "#facc15", list: "护士、销售外勤、餐厅服务员、幼师、护理员、巡检工、快递分拣、保洁", tip: "这类职业常低估自己的消耗，减脂时别把热量压得太狠。" },
+    { k: "重体力", pal: "2.0", c: "#ff5b6e", list: "建筑工、搬运装卸、农民、矿工、伐木、渔业、竞技运动员训练日", tip: "重体力日碳水要够，蛋白总量够就行，别为了减脂把主食砍光。" }
+  ];
+  var NUTS7 = [
+    { n: "碳水化合物", r: "主要燃料", d: "供能 50%–65%，谷类 200–300 克（全谷杂豆 50–150 克）", k: "精制糖和甜饮料最容易超标", ev: "A" },
+    { n: "蛋白质", r: "建材", d: "供能 10%–20%，约 1.0–1.2 克/公斤；训练 1.6–2.2", k: "一顿吃完全天，不如分 3–4 餐", ev: "A" },
+    { n: "脂肪", r: "结构 + 激素原料", d: "供能 20%–30%，烹调油 25–30 克，饱和脂肪 <10%", k: "坚果和油炸是最容易忽略的热量", ev: "A" },
+    { n: "维生素", r: "反应里的小钥匙", d: "种类多、量少，靠蔬菜水果奶蛋肉搭配", k: "维生素 D 主要靠日照，室内工作普遍偏低", ev: "A" },
+    { n: "矿物质", r: "骨骼、神经、氧运输", d: "钙 800 毫克、铁男 12／女 20 毫克、碘用碘盐", k: "不喝奶的人普遍缺钙，钠反而普遍超标", ev: "A" },
+    { n: "水", r: "介质 + 体温调节", d: "饮水 男 1700／女 1500 毫升，热天和运动后更多", k: "用饮料代替水，等于喝水加糖", ev: "B" },
+    { n: "膳食纤维", r: "喂肠道菌、稳血糖", d: "25–30 克/天，来自全谷、杂豆、蔬菜、水果", k: "只吃菜不吃全谷，纤维常常不够", ev: "A" }
+  ];
+
+  function toolState() {
+    if (!S.tool) S.tool = { sex: "m", age: 30, h: 175, w: 70, act: 1.375 };
+    return S.tool;
+  }
+
+  function bmiBand(v) {
+    if (!v) return { t: "—", c: "#94a3b8" };
+    if (v < 18.5) return { t: "偏瘦", c: "#38bdf8" };
+    if (v < 24) return { t: "正常", c: "#4ade80" };
+    if (v < 28) return { t: "超重", c: "#facc15" };
+    return { t: "肥胖", c: "#ff5b6e" };
+  }
+
+  function macroFor(kcal, w, hi) {
+    var prot = Math.round(w * hi);
+    var fat = Math.round(kcal * 0.25 / 9);
+    var carb = Math.max(0, Math.round((kcal - prot * 4 - fat * 9) / 4));
+    var tot = carb * 4 + prot * 4 + fat * 9;
+    return { carb: carb, prot: prot, fat: fat, kcal: Math.round(tot) };
+  }
+
+  function calcHtml() {
+    var t = toolState();
+    var h = Number(t.h) || 0, w = Number(t.w) || 0, age = Number(t.age) || 0;
+    if (h < 100 || w < 25) return '<div class="hint">填上身高和体重就能算了。</div>';
+    var bmi = w / Math.pow(h / 100, 2);
+    var band = bmiBand(bmi);
+    var lo = 18.5 * Math.pow(h / 100, 2), hi = 23.9 * Math.pow(h / 100, 2);
+    var bmr = 10 * w + 6.25 * h - 5 * age + (t.sex === "f" ? -161 : 5);
+    var tdee = bmr * (Number(t.act) || 1.375);
+    var cut = tdee * 0.8, bulk = tdee * 1.1;
+    var goals = [
+      { k: "减脂", kcal: cut, sub: "−20%，每周掉 0.3–0.7 公斤", c: "#38bdf8", p: 1.8 },
+      { k: "维持", kcal: tdee, sub: "体重基本不变", c: "#4ade80", p: 1.6 },
+      { k: "增肌", kcal: bulk, sub: "+10%，每周涨 0.2–0.4 公斤", c: "#ff9f43", p: 1.8 }
+    ];
+    var html = '<div class="kpis">' +
+      '<div class="kpi"><span class="kk">BMI</span><b style="color:' + band.c + '">' + bmi.toFixed(1) + '</b><span class="kv" style="color:' + band.c + '">' + band.t + '</span></div>' +
+      '<div class="kpi"><span class="kk">正常体重区间</span><b>' + lo.toFixed(0) + '–' + hi.toFixed(0) + '</b><span class="kv">公斤（BMI 18.5–23.9）</span></div>' +
+      '<div class="kpi"><span class="kk">基础代谢</span><b>' + Math.round(bmr) + '</b><span class="kv">千卡／天</span></div>' +
+      '<div class="kpi"><span class="kk">维持热量</span><b>' + Math.round(tdee) + '</b><span class="kv">千卡／天</span></div>' +
+      '</div>';
+    html += '<div class="goals">';
+    goals.forEach(function (g) {
+      var m = macroFor(g.kcal, w, g.p);
+      html += '<div class="goal" style="--gc:' + g.c + '"><div class="gk">' + g.k + '</div>' +
+        '<div class="gv">' + Math.round(g.kcal) + '<span>千卡</span></div>' +
+        '<div class="gs">' + g.sub + '</div>' +
+        '<div class="gm">碳水 ' + m.carb + 'g · 蛋白 ' + m.prot + 'g · 脂肪 ' + m.fat + 'g</div></div>';
+    });
+    html += '</div>';
+    html += '<div class="hint">BMI 分级用中国标准（24 超重、28 肥胖）；基础代谢用 Mifflin-St Jeor 公式，估算误差约 ±10%。结果是起点，用两周体重变化校正：不变就对了，涨了减 300，掉了加 300。</div>';
+    return html;
+  }
+
+  function toolInputs() {
+    var t = toolState();
+    var opts = ACTS.map(function (a) {
+      return '<option value="' + a.v + '"' + (Number(t.act) === a.v ? " selected" : "") + '>' + a.t + '</option>';
+    }).join("");
+    return '<div class="calc">' +
+      '<div class="crow"><span>性别</span><div class="seg">' +
+      '<button data-act="sex" data-sex="m" class="' + (t.sex === "m" ? "on" : "") + '">男</button>' +
+      '<button data-act="sex" data-sex="f" class="' + (t.sex === "f" ? "on" : "") + '">女</button></div></div>' +
+      '<div class="crow"><span>年龄</span><input id="t-age" type="number" inputmode="numeric" value="' + t.age + '" min="10" max="90"><i>岁</i></div>' +
+      '<div class="crow"><span>身高</span><input id="t-h" type="number" inputmode="numeric" value="' + t.h + '" min="120" max="220"><i>厘米</i></div>' +
+      '<div class="crow"><span>体重</span><input id="t-w" type="number" inputmode="decimal" value="' + t.w + '" min="25" max="200"><i>公斤</i></div>' +
+      '<div class="crow full"><span>活动档</span><select id="t-act">' + opts + '</select></div>' +
+      '</div>';
+  }
+
+  function viewTools() {
+    var jobs = JOBS.map(function (j) {
+      return '<div class="job" style="--jc:' + j.c + '"><div class="jk">' + j.k + '<em>PAL ' + j.pal + '</em></div>' +
+        '<div class="jl">' + j.list + '</div><div class="jt">' + j.tip + '</div></div>';
+    }).join("");
+    var nuts = NUTS7.map(function (n) {
+      return '<div class="nrow"><div class="nn">' + n.n + '<span class="ev e' + n.ev + '">证据 ' + n.ev + '</span></div>' +
+        '<div class="nr">' + n.r + '</div><div class="nd">' + n.d + '</div><div class="nk">坑：' + n.k + '</div></div>';
+    }).join("");
+    return '<div class="card">' +
+      '<div class="k">工具 · 算一算</div><h2 class="h2">BMI、热量、三大营养素</h2>' +
+      '<p class="lead">填四个数，一次算完。结果只存在你这台设备上。</p>' +
+      toolInputs() + '<div id="tout">' + calcHtml() + '</div></div>' +
+      '<div class="card"><div class="k">劳动强度</div><h2 class="h2">你属于哪一档</h2>' +
+      '<p class="lead">中国 DRIs 按体力活动水平（PAL）分三档；选低一档再用体重变化校正更稳。</p>' +
+      '<div class="jobs">' + jobs + '</div>' +
+      '<div class="hint">「上班坐着 + 每天训练 1 小时」：按轻体力算，训练消耗另加 200–400 千卡即可。</div></div>' +
+      '<div class="card"><div class="k">七大营养素</div><h2 class="h2">各管什么、每天多少、坑在哪</h2>' +
+      '<div class="nuts">' + nuts + '</div></div>' +
+      '<div class="card"><div class="k">说明</div><h2 class="h2">数字怎么用</h2>' +
+      '<p class="lead">所有数值都是人群估算，不是体检结论；有慢性病、孕期、进食障碍倾向请找注册营养师或医生。证据等级：A 指南与共识一致，B 中等证据，C 机制推断。</p></div>';
+  }
+
+  function recalc() {
+    var box = document.getElementById("tout");
+    if (!box) return;
+    var t = toolState();
+    var a = document.getElementById("t-age"), h = document.getElementById("t-h"), w = document.getElementById("t-w"), ac = document.getElementById("t-act");
+    if (a) t.age = Number(a.value) || t.age;
+    if (h) t.h = Number(h.value) || t.h;
+    if (w) t.w = Number(w.value) || t.w;
+    if (ac) t.act = Number(ac.value) || t.act;
+    box.innerHTML = calcHtml();
+    save();
+  }
+
   function viewStats() {
     var ma = mastery(null);
     var html = '<div class="row"><div class="h1" style="margin:0">数据</div><span class="spacer"></span>' +
@@ -1667,6 +1888,11 @@ window.EX["kid-24"] = { e: "8–18 岁的 12 周路线可以很朴素：每周 2
       var ta = document.getElementById("note");
       st(id).note = ta.value; save(); toast("笔记已保存");
     }
+    else if (act === "sex") {
+      toolState().sex = el.getAttribute("data-sex"); save();
+      document.querySelectorAll("[data-sex]").forEach(function (b) { b.classList.toggle("on", b === el); });
+      recalc();
+    }
     else if (act === "export") exportData();
     else if (act === "reset") {
       if (confirm("确定清空全部学习进度与笔记吗？建议先导出备份。")) {
@@ -1680,9 +1906,11 @@ window.EX["kid-24"] = { e: "8–18 岁的 12 周路线可以很朴素：每周 2
   });
 
   document.addEventListener("input", function (e) {
+    if (e.target.id === "t-age" || e.target.id === "t-h" || e.target.id === "t-w") { recalc(); return; }
     if (e.target.id === "qbox") { filters.q = e.target.value; render(); var b = document.getElementById("qbox"); if (b) { b.focus(); b.setSelectionRange(b.value.length, b.value.length); } }
   });
   document.addEventListener("change", function (e) {
+    if (e.target.id === "t-act") { recalc(); return; }
     if (e.target.id === "subsel") { filters.sub = e.target.value; render(); }
     if (e.target.id === "agesel") { filters.age = e.target.value; render(); }
     if (e.target.id === "statesel") { filters.state = e.target.value; render(); }
