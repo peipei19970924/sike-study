@@ -1294,6 +1294,1719 @@ window.EX["kid-24"] = { e: "8–18 岁的 12 周路线可以很朴素：每周 2
     html += '<div class="hint">今日新卡额度 <span class="kbd">' + (S.settings.newPerDay >= 999 ? "不限" : S.settings.newPerDay) +
       '</span> 张（今天还可学 <span class="kbd">' + newRoom() + '</span> 张，全书还剩 <span class="kbd">' + freshList().length +
       '</span> 张没学）。额度用完也能点「继续学」随时加练。节奏去「数据」页调。</div>';
+    html += '<div class="hint">记录只存在你当前这台设备的浏览器里：同一个网址，你和别人各自从 0 开始，互相看不到对方的进度。</div>';
+    html += "</div>";
+
+    // 四科进度
+    html += '<div class="card" style="margin-top:14px"><div class="h2">五科进度</div>';
+    SUBS.forEach(function (x) {
+      var p = mastery(x.s);
+      var pct = Math.round(p.started / p.total * 100);
+      html += '<div class="subj-line"><div class="nm" style="color:' + x.c + '">' + x.s + "</div>" +
+        '<div class="bar"><i style="width:' + pct + '%;background:' + x.c + '"></i></div>' +
+        '<div class="pc">' + p.started + "/" + p.total + " · 掌握" + p.m + "</div></div>";
+    });
+    html += '<div class="hint">进度 = 已学过的卡；「掌握」= 连续答对进入长期复习（box≥3）。</div></div>';
+
+    // 下一步
+    var nx = freshList()[0];
+    if (nx) {
+      html += '<div class="card" style="margin-top:14px"><div class="row"><div class="h2" style="margin:0">下一张新卡</div><span class="spacer"></span>' + tag(nx.s) +
+        '<span class="chip">L' + nx.lv + "</span></div>" +
+        '<div style="margin-top:10px;font-weight:700;font-size:15.5px">' + esc(nx.t) + "</div>" +
+        '<div class="muted" style="margin-top:4px;font-size:13px">' + esc(nx.b.slice(0, 46)) + "…</div></div>";
+    }
+
+    html += '<div class="card" style="margin-top:14px"><div class="h2">怎么用（30 秒版）</div>' +
+      '<ol style="margin:0;padding-left:20px;color:#cfd9e6;font-size:14px;line-height:1.95">' +
+      "<li>每天打开，点「开始今天的学习」——系统已排好该复习哪些、新学哪几张。</li>" +
+      "<li>新卡先读讲解，再答一道自测；复习卡直接答，答完回看讲解。</li>" +
+      "<li>答错不用怕，它会在明天、两天后、四天后反复出现，直到你记牢。</li>" +
+      "<li>每个科目 L1→L3 渐进；学完想去线下练，看对应科目最后一课的路线图。</li>" +
+      "<li>想先建立整体骨架，去「速览」看必会卡与前沿更新，再决定学哪科。</li></ol>" +
+      '<div class="hint">键盘：<span class="kbd">1</span><span class="kbd">2</span><span class="kbd">3</span> 选项，<span class="kbd">空格</span> 下一张，<span class="kbd">Esc</span> 关闭详情。</div></div>';
+
+    return html;
+  }
+
+  function viewStudy() {
+    var it = cur(); var c = MAP[it.id]; var s = st(c.id);
+    var total = sess.items.length, idx = sess.i;
+    var html = '<div class="card study fadein">';
+    html += '<div class="study-head">' + tag(c.s) + '<span class="chip">L' + c.lv + "</span>" +
+      '<span class="q-tag">' + (it.type === "new" ? "新卡" : "复习") + "</span>" +
+      '<span class="spacer"></span><span class="dim2" style="font-size:12px">' + (idx + 1) + " / " + total + "</span></div>";
+    html += '<div class="prog" style="border-radius:0;border:0;height:4px"><i style="width:' + (idx / total * 100) + '%"></i></div>';
+
+    if (sess.stage === "read") {
+      html += '<div class="title">' + esc(c.t) + "</div>";
+      html += metaRow(c);
+      html += hookHtml(c);
+      html += '<div class="body">' + esc(c.b) + "</div>";
+      html += '<ul class="pts">' + c.p.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul>";
+      if (c.m) html += '<div class="mis"><b>常见误区　</b>' + esc(c.m) + "</div>";
+      html += egHtml(c);
+      html += '<div class="q-wrap"><button class="btn primary wide" data-act="toquiz">读完，做 1 道自测 →</button>' +
+        '<div class="hint">先试着用自己的话复述上面的要点，再点按钮。</div></div>';
+      html += "</div>";
+      return html;
+    }
+
+    // quiz
+    html += '<div class="title" style="font-size:19px">' + esc(c.t) + "</div>";
+    html += '<div class="q-wrap" style="border-top:0;margin-top:6px">';
+    html += '<div class="q-ask">' + esc(c.q.a) + "</div>";
+    c.q.o.forEach(function (o, i) {
+      var cls = "opt";
+      if (sess.answered) {
+        cls += " lock";
+        if (i === c.q.i) cls += " correct";
+        else if (i === sess.picked) cls += " wrong";
+      }
+      html += '<button class="' + cls + '" data-act="opt" data-i="' + i + '"><span class="key">' + "ABC"[i] + "</span>" + esc(o) + "</button>";
+    });
+    if (sess.answered) {
+      var ok = sess.picked === c.q.i;
+      html += '<div class="fb ' + (ok ? "ok" : "no") + '"><b>' + (ok ? "答对了 ✓" : "答错了 ✗") + "</b>" + esc(c.q.w) + "</div>";
+      html += evNote(c);
+      html += hookHtml(c);
+      html += '<div style="margin-top:14px"><button class="btn primary wide" data-act="next">' +
+        (sess.i + 1 >= total ? "完成本次学习 →" : "下一张 →") + "</button>";
+      html += '<div class="hint">下次复习：' + (s.due || "—") + "（box " + s.box + "）</div></div>";
+      html += '<details class="acc" style="margin-top:10px"><summary>展开完整讲解</summary>' +
+        '<div class="body" style="padding:10px 0 0">' + esc(c.b) + "</div>" +
+        '<ul class="pts" style="margin:10px 0 0">' + c.p.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul>" + egHtml(c) + "</details>";
+    } else {
+      html += '<div class="hint">先自己想 5 秒，再选。蒙对了不算会——系统按「答对一次」记，但你可以用笔记写下不确定的地方。</div>';
+    }
+    html += "</div></div>";
+    return html;
+  }
+
+  function viewDone() {
+    var ok = sess.results.filter(function (r) { return r.ok; }).length;
+    var n = sess.results.length;
+    var acc = n ? Math.round(ok / n * 100) : 0;
+    var nd = dueList().length;
+    var html = '<div class="card done fadein">';
+    html += '<div class="done-ring">' + ring(acc, acc + "%", "本次正确率") + "</div>";
+    html += '<div class="big">' + (acc >= 80 ? "🎯" : acc >= 50 ? "💪" : "🌱") + "</div>";
+    html += '<div class="h1">本次完成 ' + n + " 张</div>";
+    html += '<div class="muted">答对 ' + ok + " 张 · 正确率 " + acc + "%</div>";
+    html += '<div class="hr"></div>';
+    html += '<div class="muted" style="font-size:13.5px">明日到期复习约 ' + nd + " 张。间隔重复的意义在于：忘了不要紧，它还会回来。</div>";
+    html += '<div class="stat" style="max-width:420px;margin:18px auto 0">' +
+      '<div><div class="k">连续打卡</div><div class="v">' + (S.streak.days || 0) + "</div></div>" +
+      '<div><div class="k">已掌握</div><div class="v">' + mastery(null).m + "</div></div>" +
+      '<div><div class="k">今日总学</div><div class="v">' + todayStat().n + "</div></div>" +
+      '<div><div class="k">正确率</div><div class="v">' + todayStat().acc + "%</div></div></div>";
+    html += restTip();
+    html += '<div style="margin-top:22px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">' +
+      '<button class="btn primary" data-act="more">还有劲？再学 5 张 →</button>' +
+      '<button class="btn" data-act="free">自由复习 10 张</button>' +
+      '<button class="btn ghost" data-act="home">今天到此为止</button></div>';
+    html += '<div class="hint" style="text-align:center;margin-top:10px">学多学少都算数，但记忆主要在睡眠里巩固——别指望一口气学完，每天来一遍最省力。</div>';
+    html += "</div>";
+    return html;
+  }
+
+  function viewLib() {
+    var list = CARDS.filter(function (c) {
+      if (filters.sub !== "all" && c.s !== filters.sub) return false;
+      if (filters.age !== "all" && c.age !== filters.age) return false;
+      var s = S.cards[c.id];
+      var box = s ? s.box : 0;
+      if (filters.state === "new" && box !== 0) return false;
+      if (filters.state === "learning" && !(box > 0 && box < 3)) return false;
+      if (filters.state === "mastered" && !(box >= 3)) return false;
+      if (filters.q) {
+        var q = filters.q.toLowerCase();
+        var hay = (c.t + c.b + c.p.join("") + c.s + (s && s.note ? s.note : "")).toLowerCase();
+        if (hay.indexOf(q) < 0) return false;
+      }
+      return true;
+    });
+    var html = '<div class="row"><div class="h1" style="margin:0">卡片库</div>' +
+      '<span class="spacer"></span><span class="dim2" style="font-size:13px">共 ' + CARDS.length + " 张</span></div>";
+    html += '<div class="tools"><input type="search" id="qbox" placeholder="搜索关键词，如 渐进、刺拳、蛋白、肩袖…" value="' + esc(filters.q) + '">' +
+      '<select class="sel" id="subsel">' +
+      '<option value="all">全部科目</option>' +
+      SUBS.map(function (x) { return '<option value="' + x.s + '"' + (filters.sub === x.s ? " selected" : "") + ">" + x.s + "</option>"; }).join("") +
+      "</select>" +
+      '<select class="sel" id="statesel">' +
+      '<option value="all">全部状态</option><option value="new"' + (filters.state === "new" ? " selected" : "") + ">未学</option>" +
+      '<option value="learning"' + (filters.state === "learning" ? " selected" : "") + ">学习中</option>" +
+      '<option value="mastered"' + (filters.state === "mastered" ? " selected" : "") + ">已掌握</option></select>" +
+      '<select class="sel" id="agesel"><option value="all">全部年龄</option>' +
+      AGES.map(function (a) { return '<option value="' + a + '"' + (filters.age === a ? " selected" : "") + ">" + a + " 岁</option>"; }).join("") +
+      "</select></div>";
+    if (!list.length) html += '<div class="card muted" style="text-align:center;padding:30px">没有匹配的卡片</div>';
+    html += '<div class="list">';
+    list.forEach(function (c) {
+      var s = S.cards[c.id] || { box: 0 };
+      var stTxt = s.box === 0 ? "未学" : s.box >= 3 ? "已掌握" : "学习中（box " + s.box + "）";
+      html += '<div class="item" data-act="open" data-id="' + c.id + '">' + tag(c.s) +
+        '<div style="flex:1"><div class="tt">' + esc(c.t) + '</div>' + metaRow(c) +
+        '<div class="isub">' + esc(c.b.length > 46 ? c.b.slice(0, 46) + "…" : c.b) + '</div>' +
+        '<div class="meta">L' + c.lv + " · " + stTxt +
+        (s.due ? " · 下次 " + s.due : "") + (s.note ? " · 有笔记" : "") + "</div></div></div>";
+    });
+    html += "</div>";
+    return html;
+  }
+
+  function viewSkim() {
+    var keys = CARDS.filter(function (c) { return KEYM[c.id]; });
+    var html = '<div class="row"><div class="h1" style="margin:0">速览</div><span class="spacer"></span>' +
+      '<span class="dim2" style="font-size:13px">' + keys.length + " 张必会</span></div>";
+    html += '<div class="hint">先看必会卡建立骨架，再去「学习」逐张过。每张卡都标了证据等级：A 强 / B 中等 / C 有限。</div>';
+
+    SUBS.forEach(function (x) {
+      var ks = keys.filter(function (c) { return c.s === x.s; });
+      if (!ks.length) return;
+      html += '<div class="card" style="margin-top:14px"><div class="row"><div class="h2" style="margin:0;color:' + x.c + '">' + x.s + "</div>" +
+        '<span class="spacer"></span><span class="dim2" style="font-size:12px">' + ks.length + " 张必会</span></div>";
+      ks.forEach(function (c) {
+        html += '<div class="skim" data-act="open" data-id="' + c.id + '"><div class="st">' + esc(c.t) + evHtml(c) + "</div>" +
+          '<div class="sp">' + esc(c.p[0]) + "</div></div>";
+      });
+      html += "</div>";
+    });
+
+    html += '<div class="card" style="margin-top:14px"><div class="row"><div class="h2" style="margin:0">前沿速递</div>' +
+      '<span class="spacer"></span><span class="dim2" style="font-size:12px">截至 2025 年整理</span></div>';
+    html += '<div class="hint" style="margin-top:6px">这些是近年有实质更新的结论。标「证据 A」说明已写入主流指南，可放心执行。</div>';
+    FRESH.slice().sort(function (a, b) { return b.y - a.y; }).forEach(function (f) {
+      var c = MAP[f.card];
+      html += '<div class="fresh" data-act="open" data-id="' + f.card + '">' +
+        '<div class="fy">' + f.y + "</div>" +
+        '<div class="fmain"><div class="st">' + esc(f.t) + '<span class="ev e' + f.ev + '">证据 ' + f.ev + "</span></div>" +
+        '<div class="sp">' + esc(f.b) + "</div>" +
+        (c ? '<div class="fl">对应卡片：' + esc(c.t) + "</div>" : "") + "</div></div>";
+    });
+    html += "</div>";
+    return html;
+  }
+
+  function viewStats() {
+    var ma = mastery(null);
+    var html = '<div class="row"><div class="h1" style="margin:0">数据</div><span class="spacer"></span>' +
+      '<span class="dim2" style="font-size:13px">开始于 ' + S.created + "</span></div>";
+
+    // 热力图
+    html += '<div class="card" style="margin-top:14px"><div class="row"><div class="h2" style="margin:0">最近 12 周</div>' +
+      '<span class="spacer"></span><span class="dim2" style="font-size:12px">每格一天，越亮学得越多</span></div>';
+    html += '<div class="heat">' + heatCells() + "</div></div>";
+
+    // 概览
+    var totalSeen = 0, totalOk = 0, totalBad = 0;
+    Object.keys(S.cards).forEach(function (k) { totalSeen += S.cards[k].seen || 0; totalOk += S.cards[k].ok || 0; totalBad += S.cards[k].bad || 0; });
+    html += '<div class="card" style="margin-top:14px"><div class="h2">总览</div><div class="stat">' +
+      '<div><div class="k">累计答题</div><div class="v">' + totalSeen + "</div></div>" +
+      '<div><div class="k">累计正确</div><div class="v">' + totalOk + "</div></div>" +
+      '<div><div class="k">累计答错</div><div class="v">' + totalBad + "</div></div>" +
+      '<div><div class="k">掌握率</div><div class="v">' + Math.round(ma.m / ma.total * 100) + "%</div></div></div>";
+    SUBS.forEach(function (x) {
+      var p = mastery(x.s);
+      html += '<div class="subj-line"><div class="nm" style="color:' + x.c + '">' + x.s + "</div>" +
+        '<div class="bar"><i style="width:' + Math.round(p.m / p.total * 100) + '%;background:' + x.c + '"></i></div>' +
+        '<div class="pc">掌握 ' + p.m + "/" + p.total + "</div></div>";
+    });
+    html += "</div>";
+
+    // 易错
+    var weak = CARDS.filter(function (c) { var s = S.cards[c.id]; return s && s.bad > 0; })
+      .sort(function (a, b) { return (S.cards[b.id].bad - S.cards[a.id].bad); }).slice(0, 6);
+    html += '<div class="card" style="margin-top:14px"><div class="h2">最该重看的卡（按答错次数）</div>';
+    if (!weak.length) html += '<div class="muted" style="font-size:13.5px">还没有答错记录，继续保持。</div>';
+    weak.forEach(function (c) {
+      html += '<div class="weak" data-act="open" data-id="' + c.id + '" style="cursor:pointer">' + tag(c.s) +
+        '<span style="flex:1">' + esc(c.t) + "</span><span class=\"n\">错 " + S.cards[c.id].bad + " 次</span></div>";
+    });
+    html += "</div>";
+
+    // 设置
+    html += '<div class="card" style="margin-top:14px"><div class="h2">设置</div>';
+    html += '<div class="row" style="margin-bottom:10px"><span style="font-size:14px">每天新卡数量</span><span class="spacer"></span>' +
+      '<select class="sel" id="newsel">' + [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 999].map(function (n) {
+        return '<option value="' + n + '"' + (S.settings.newPerDay === n ? " selected" : "") + ">" + (n >= 999 ? "不限（有劲就学）" : n + " 张") + "</option>";
+      }).join("") + "</select></div>";
+    html += '<div class="hint" style="margin:0 0 8px">共 ' + CARDS.length + " 张卡" +
+      (S.settings.newPerDay >= 999 ? "；额度已设为不限——想学多少学多少，「开始今天的学习」会一直给新卡。" :
+        "；按每天 " + S.settings.newPerDay + " 张算，约 " + Math.ceil(CARDS.length / S.settings.newPerDay) + " 天学完第一遍，之后进入复习循环（最长间隔 30 天）。") + "</div>";
+    html += '<div class="hint" style="margin:0 0 12px">不管额度设多少，首页和完成页的「继续学 5 张」都能随时加练；加练的新卡照样进间隔重复队列，不会因为多学就记不牢。</div>';
+    html += '<div class="row"><button class="btn sm" data-act="export">导出备份 JSON</button>' +
+      '<label class="btn sm" style="cursor:pointer">导入备份<input type="file" id="imp" accept=".json" style="display:none"></label>' +
+      '<span class="spacer"></span><button class="btn sm" data-act="reset">清空进度</button></div>';
+    html += '<div class="hint">备份文件含有全部学习进度与笔记。换电脑、换浏览器时导入即可继续。</div></div>';
+
+    // 记录与隐私
+    html += '<div class="card" style="margin-top:14px"><div class="row"><div class="h2" style="margin:0">你的记录在哪</div>' +
+      '<span class="spacer"></span><span class="chip">本机专属</span></div>';
+    html += '<div class="hint" style="margin:8px 0 0">进度、笔记、错题都只保存在<b>这台设备、这个浏览器</b>里，不会上传，也不会给别人看。同一个二维码/网址给多少人扫，每个人打开都是自己的空白进度，各学各的。</div>';
+    html += '<div class="hint" style="margin:8px 0 0">换设备接着学：在这里点「导出备份 JSON」，把文件传到新设备，再点「导入备份」。</div>';
+    html += '<div class="hint" style="margin:8px 0 0">同一台手机换浏览器（比如微信里打开 vs 用浏览器打开）会被当成两台设备，进度不共享——固定一种打开方式即可。</div>';
+    html += '<div class="hint" style="margin:8px 0 0">清理浏览器数据 / 无痕模式会清掉记录，重要进度记得导出备份。</div></div>';
+
+    // 内容版本与更新记录
+    html += '<div class="card" style="margin-top:14px"><div class="row"><div class="h2" style="margin:0">内容版本</div>' +
+      '<span class="spacer"></span><span class="chip">' + VER.v + " · " + VER.d + "</span></div>";
+    html += '<div class="hint" style="margin:8px 0 0">知识会变：指南修订、新共识出现时，卡片内容跟着改，版本号也会变。看到版本号变了，说明有值得重看的内容。</div>';
+    (window.UPDLOG || []).forEach(function (u) {
+      html += '<div class="updline"><span class="ud">' + u.d + "</span><b>" + esc(u.t) + "</b>" +
+        '<div class="umuted">' + esc(u.b) + "</div></div>";
+    });
+    html += '<div class="hint">想快一点跟上前沿：只看「速览」页顶部的前沿速递，10 条，几分钟看完。</div></div>';
+
+    html += '<div class="footer">五课学习中心 · 内容版本 ' + VER.v + '（' + VER.d + '）· 内容为一般性科普，不构成医疗、训练或营养处方。<br>身体不适请就医；训练请在有资质教练指导下进行。</div>';
+    return html;
+  }
+
+  function heatCells() {
+    var t = new Date();
+    var end = dstr(t);
+    var startD = new Date(t.getFullYear(), t.getMonth(), t.getDate() - 83);
+    // 对齐到周一
+    var dow = (startD.getDay() + 6) % 7;
+    startD = new Date(startD.getFullYear(), startD.getMonth(), startD.getDate() - dow);
+    var cells = [];
+    var d = startD;
+    while (dstr(d) <= end) {
+      var k = dstr(d);
+      var lg = S.log[k];
+      var n = lg ? (lg.new + lg.rev) : 0;
+      var lv = n === 0 ? "" : n <= 2 ? "l1" : n <= 5 ? "l2" : n <= 9 ? "l3" : "l4";
+      cells.push('<i class="' + lv + '" title="' + k + " · " + n + ' 张"></i>');
+      d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+    }
+    return cells.join("");
+  }
+
+  /* ---------- 详情弹层 ---------- */
+  function syncSheet() {
+    var sheet = document.getElementById("sheet");
+    if (!openId) { sheet.classList.remove("on"); sheet.innerHTML = ""; return; }
+    var c = MAP[openId]; var s = st(c.id);
+    var stTxt = s.box === 0 ? "未学" : s.box >= 3 ? "已掌握" : "学习中";
+    sheet.innerHTML = '<div class="sheet-in">' +
+      '<div class="row">' + tag(c.s) + '<span class="chip">L' + c.lv + '</span><span class="chip">' + stTxt + '</span>' +
+      '<span class="spacer"></span><button class="btn sm ghost" data-act="close">关闭 ✕</button></div>' +
+      '<div class="title" style="margin:14px 0 8px">' + esc(c.t) + "</div>" +
+      metaRow(c) +
+      hookHtml(c) +
+      '<div class="body" style="padding:0">' + esc(c.b) + "</div>" +
+      '<ul class="pts" style="margin:12px 0 0">' + c.p.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") + "</ul>" +
+      (c.m ? '<div class="mis"><b>常见误区　</b>' + esc(c.m) + "</div>" : "") +
+      egHtml(c) +
+      '<div class="hr"></div><div class="q-ask">自测</div><div class="muted" style="font-size:14px">' +
+      esc(c.q.a) + "</div>" +
+      '<div style="margin-top:8px;font-size:13.5px;color:var(--ok)">答案：' + "ABC"[c.q.i] + ". " + esc(c.q.o[c.q.i]) + "</div>" +
+      '<div class="muted" style="font-size:13px;margin-top:4px">' + esc(c.q.w) + "</div>" +
+      evNote(c) +
+      '<div class="hr"></div><div class="h2" style="font-size:14px">我的笔记</div>' +
+      '<textarea id="note" placeholder="写下你的理解、疑问、自己的例子…">' + esc(s.note || "") + "</textarea>" +
+      '<div class="row" style="margin-top:8px"><button class="btn sm primary" data-act="savenote" data-id="' + c.id + '">保存笔记</button>' +
+      '<span class="dim2" style="font-size:12px">答题 ' + (s.seen || 0) + " 次 · 对 " + (s.ok || 0) + " · 错 " + (s.bad || 0) +
+      (s.due ? " · 下次 " + s.due : "") + "</span></div></div>";
+    sheet.classList.add("on");
+  }
+  function closeSheet() { openId = null; syncSheet(); }
+
+  /* ---------- 提示 ---------- */
+  var toastTimer = null;
+  function toast(msg) {
+    var el = document.getElementById("toast");
+    el.textContent = msg; el.classList.add("on");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.classList.remove("on"); }, 2200);
+  }
+
+  /* ---------- 备份 ---------- */
+  function exportData() {
+    var blob = new Blob([JSON.stringify({ app: "sike-study", v: 1, exported: new Date().toISOString(), state: S }, null, 2)], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "四课学习备份_" + today() + ".json";
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 3000);
+    toast("已导出备份文件");
+  }
+  function importData(file) {
+    var fr = new FileReader();
+    fr.onload = function () {
+      try {
+        var o = JSON.parse(fr.result);
+        var s = o.state || o;
+        if (!s.cards || typeof s.cards !== "object") throw new Error("bad");
+        S = Object.assign(blankState(), s);
+        save(); render(); toast("导入成功，共 " + Object.keys(S.cards).length + " 张卡的记录");
+      } catch (e) { toast("文件格式不对，导入失败"); }
+    };
+    fr.readAsText(file);
+  }
+
+  /* ---------- 事件 ---------- */
+  document.addEventListener("click", function (e) {
+    var el = e.target.closest("[data-act]");
+    if (!el) {
+      if (e.target.id === "sheet") closeSheet();
+      return;
+    }
+    var act = el.getAttribute("data-act");
+    if (act === "start") startSession("day");
+    else if (act === "free") startSession("free", 10);
+    else if (act === "more") startSession("more", EXTRA);
+    else if (act === "home") { sess = null; view = "home"; render(); }
+    else if (act === "toquiz") { sess.stage = "quiz"; render(); }
+    else if (act === "opt") { answer(Number(el.getAttribute("data-i"))); }
+    else if (act === "next") nextCard();
+    else if (act === "open") { openId = el.getAttribute("data-id"); syncSheet(); }
+    else if (act === "close") closeSheet();
+    else if (act === "savenote") {
+      var id = el.getAttribute("data-id");
+      var ta = document.getElementById("note");
+      st(id).note = ta.value; save(); toast("笔记已保存");
+    }
+    else if (act === "export") exportData();
+    else if (act === "reset") {
+      if (confirm("确定清空全部学习进度与笔记吗？建议先导出备份。")) {
+        S = blankState(); save(); render(); toast("已清空");
+      }
+    } else if (act === "tab") {
+      var v = el.getAttribute("data-tab");
+      if (v === "study" && (!sess || sess.done)) { sess = null; startSession("day"); return; }
+      view = v; render();
+    }
+  });
+
+  document.addEventListener("input", function (e) {
+    if (e.target.id === "qbox") { filters.q = e.target.value; render(); var b = document.getElementById("qbox"); if (b) { b.focus(); b.setSelectionRange(b.value.length, b.value.length); } }
+  });
+  document.addEventListener("change", function (e) {
+    if (e.target.id === "subsel") { filters.sub = e.target.value; render(); }
+    if (e.target.id === "agesel") { filters.age = e.target.value; render(); }
+    if (e.target.id === "statesel") { filters.state = e.target.value; render(); }
+    if (e.target.id === "newsel") { S.settings.newPerDay = Number(e.target.value); save(); toast("每天新卡：" + S.settings.newPerDay + " 张"); }
+    if (e.target.id === "imp" && e.target.files && e.target.files[0]) importData(e.target.files[0]);
+  });
+
+  document.addEventListener("keydown", function (e) {
+    if (openId && e.key === "Escape") { closeSheet(); return; }
+    if (view !== "study" || !sess || sess.done) return;
+    if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") return;
+    if (sess.stage === "read" && (e.key === " " || e.key === "Enter")) { e.preventDefault(); sess.stage = "quiz"; render(); return; }
+    if (sess.stage === "quiz") {
+      if (!sess.answered && ["1", "2", "3"].indexOf(e.key) >= 0) { e.preventDefault(); answer(Number(e.key) - 1); return; }
+      if (sess.answered && (e.key === " " || e.key === "Enter")) { e.preventDefault(); nextCard(); }
+    }
+  });
+
+  // 标签切换按钮（顶栏）
+  document.addEventListener("DOMContentLoaded", function () { render(); });
+
+  window.__sikeRender = render;
+  if (document.readyState !== "loading") render();
+})();
+
+</script>
+</body>
+</html>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0e1116">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="五课学习">
+<meta name="format-detection" content="telephone=no">
+<title>五课学习中心 · 健身 / 拳击 / 营养 / 解剖 / 儿童</title>
+<meta name="description" content="健身、拳击、膳食营养、解剖、儿童青少年训练：120 张知识卡，间隔重复自动排复习，每天 10 分钟。">
+<meta property="og:title" content="五课学习中心">
+<meta property="og:description" content="健身 · 拳击 · 营养 · 解剖 · 儿童｜120 张卡，每天 10 分钟，自动排复习。">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ff9f43'/%3E%3Cstop offset='.5' stop-color='%234da3ff'/%3E%3Cstop offset='1' stop-color='%23a78bfa'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='%23141b24'/%3E%3Ccircle cx='32' cy='32' r='15' fill='none' stroke='url(%23g)' stroke-width='6' stroke-linecap='round' stroke-dasharray='72 22' transform='rotate(-90 32 32)'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0e1116; --bg2:#151a22; --card:#1b222c; --line:#28313d;
+  --fg:#e8edf4; --dim:#93a1b3; --dim2:#6b7a8d;
+  --acc:#4da3ff; --ok:#3ddc97; --bad:#ff6b6b; --warn:#ffb84d;
+  --fit:#ff9f43; --box:#ff5b6e; --nut:#4ade80; --ana:#a78bfa;
+  --r:14px; --sh:0 8px 26px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:radial-gradient(1200px 600px at 50% -200px,#1a2432 0%,var(--bg) 55%) fixed;
+  color:var(--fg);font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  min-height:100vh;
+}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+input{font:inherit;color:inherit}
+.wrap{max-width:860px;margin:0 auto;padding:18px 16px 96px}
+
+/* 顶栏 */
+.top{position:sticky;top:0;z-index:20;backdrop-filter:blur(12px);
+  background:linear-gradient(180deg,rgba(14,17,22,.94),rgba(14,17,22,.72));
+  border-bottom:1px solid var(--line);}
+.top-in{max-width:860px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:12px}
+.logo{font-weight:800;letter-spacing:.5px;font-size:17px;display:flex;align-items:center;gap:8px}
+.logo i{display:inline-block;width:26px;height:26px;border-radius:9px;
+  background:conic-gradient(from 210deg,var(--fit),var(--box),var(--ana),var(--nut),var(--fit));
+  box-shadow:inset 0 0 0 2px rgba(0,0,0,.35)}
+.top .sub{color:var(--dim2);font-size:12px;margin-left:auto}
+.tabs{display:flex;gap:6px;max-width:860px;margin:0 auto;padding:0 16px 10px}
+.tab{padding:7px 14px;border-radius:999px;color:var(--dim);font-size:13.5px;border:1px solid transparent}
+.tab.on{background:var(--card);color:var(--fg);border-color:var(--line)}
+.tab:hover{color:var(--fg)}
+
+/* 通用 */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--sh)}
+.muted{color:var(--dim)} .dim2{color:var(--dim2)}
+.h1{font-size:26px;font-weight:800;letter-spacing:-.3px;margin:2px 0 6px}
+.h2{font-size:18px;font-weight:700;margin:0 0 10px}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.spacer{flex:1}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;
+  font-size:12px;background:#0f141b;border:1px solid var(--line);color:var(--dim)}
+.dot{width:8px;height:8px;border-radius:50%}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:11px 18px;border-radius:12px;background:#232c38;border:1px solid #33404f;
+  font-weight:600;font-size:14px;transition:.16s}
+.btn:hover{background:#2b3644;transform:translateY(-1px)}
+.btn.primary{background:linear-gradient(135deg,#2f7ef0,#4da3ff);border-color:#4da3ff;color:#06121f}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ok{background:#123a2c;border-color:#2b7a5c;color:#8bf0c4}
+.btn.ghost{background:transparent}
+.btn.wide{width:100%}
+.btn.sm{padding:7px 12px;font-size:13px;border-radius:10px}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+
+/* 首页 */
+.hero{position:relative;overflow:hidden;padding:22px}
+.hero:before{content:"";position:absolute;inset:-40% -10% auto auto;width:320px;height:320px;
+  background:radial-gradient(circle,rgba(77,163,255,.20),transparent 65%);pointer-events:none}
+.stat{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
+.stat .k{font-size:11px;color:var(--dim2);letter-spacing:.4px}
+.stat .v{font-size:22px;font-weight:800;margin-top:2px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:640px){.grid2{grid-template-columns:1fr}.stat{grid-template-columns:repeat(2,1fr)}}
+
+/* 进度条 */
+.bar{height:7px;border-radius:99px;background:#0d1218;overflow:hidden;border:1px solid var(--line)}
+.bar>i{display:block;height:100%;border-radius:99px;transition:width .5s}
+.subj-line{display:flex;align-items:center;gap:10px;margin:12px 0}
+.subj-line .nm{width:52px;font-size:13px;font-weight:600}
+.subj-line .bar{flex:1}
+.subj-line .pc{width:64px;text-align:right;font-size:12px;color:var(--dim)}
+
+/* 学习卡 */
+.study{padding:0}
+.study-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.prog{flex:1;height:5px;background:#0d1218;border-radius:99px;overflow:hidden}
+.prog>i{display:block;height:100%;background:var(--acc);transition:width .3s}
+.q-tag{font-size:11.5px;color:var(--dim2);letter-spacing:.6px}
+.title{font-size:21px;font-weight:800;line-height:1.35;margin:14px 18px 8px}
+.body{font-size:15.5px;line-height:1.85;color:#dbe3ee;padding:0 18px;white-space:pre-wrap}
+.pts{margin:14px 18px 0;padding:0;list-style:none}
+.pts li{position:relative;padding-left:22px;margin:8px 0;color:#cfd9e6;font-size:14.4px}
+.pts li:before{content:"";position:absolute;left:4px;top:.62em;width:7px;height:7px;border-radius:2px;
+  background:var(--acc);box-shadow:0 0 0 3px rgba(77,163,255,.15)}
+.mis{margin:14px 18px 0;padding:11px 14px;border-radius:10px;background:rgba(255,107,107,.07);
+  border:1px dashed rgba(255,107,107,.35);font-size:13.6px;color:#ffc9c9}
+.mis b{color:#ff8f8f}
+.q-wrap{padding:16px 18px 18px;border-top:1px dashed var(--line);margin-top:16px}
+.q-ask{font-size:16px;font-weight:700;margin:0 0 12px}
+.opt{display:block;width:100%;text-align:left;padding:12px 14px;margin:8px 0;border-radius:11px;
+  background:#141b24;border:1px solid var(--line);font-size:14.5px;transition:.14s}
+.opt:hover:not(.lock){border-color:#3d8bfd;background:#17202c}
+.opt .key{display:inline-block;width:22px;height:22px;line-height:20px;text-align:center;border-radius:6px;
+  background:#0d1218;border:1px solid var(--line);font-size:11.5px;margin-right:10px;color:var(--dim)}
+.opt.correct{border-color:var(--ok);background:rgba(61,220,151,.10)}
+.opt.correct .key{background:var(--ok);color:#062317;border-color:var(--ok)}
+.opt.wrong{border-color:var(--bad);background:rgba(255,107,107,.10)}
+.opt.wrong .key{background:var(--bad);color:#2a0606;border-color:var(--bad)}
+.fb{margin-top:12px;padding:12px 14px;border-radius:11px;font-size:14px;line-height:1.7}
+.fb.ok{background:rgba(61,220,151,.09);border:1px solid rgba(61,220,151,.35)}
+.fb.no{background:rgba(255,107,107,.09);border:1px solid rgba(255,107,107,.35)}
+.fb b{display:block;margin-bottom:4px}
+
+/* 完成页 */
+.done{text-align:center;padding:34px 22px}
+.done .big{font-size:52px;line-height:1;margin-bottom:10px}
+
+/* 卡片库 */
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.tools input[type=search]{flex:1;min-width:180px;padding:9px 12px;border-radius:10px;
+  background:#0f141b;border:1px solid var(--line);outline:none}
+.tools input[type=search]:focus{border-color:#3d8bfd}
+.sel{padding:9px 12px;border-radius:10px;background:#0f141b;border:1px solid var(--line);color:var(--fg)}
+.list{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.item{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:12px;
+  background:var(--card);border:1px solid var(--line);cursor:pointer;transition:.14s}
+.item:hover{border-color:#3a4a5f;background:#1e2632}
+.item .tag{font-size:11px;padding:2px 7px;border-radius:6px;white-space:nowrap;margin-top:2px}
+.item .tt{font-size:14.3px;font-weight:600;line-height:1.5}
+.item .isub{font-size:12px;line-height:1.5;color:var(--dim);margin-top:5px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.item .meta{font-size:11.5px;color:var(--dim2);margin-top:3px}
+
+/* 详情弹层 */
+.sheet{position:fixed;inset:0;z-index:60;background:rgba(6,9,13,.7);backdrop-filter:blur(4px);
+  display:none;overflow:auto;padding:24px 14px}
+.sheet.on{display:block}
+.sheet-in{max-width:720px;margin:0 auto;background:var(--card);border:1px solid var(--line);
+  border-radius:16px;padding:20px;box-shadow:0 24px 60px rgba(0,0,0,.6)}
+.sheet textarea{width:100%;min-height:80px;margin-top:8px;padding:10px 12px;border-radius:10px;
+  background:#0f141b;border:1px solid var(--line);color:var(--fg);resize:vertical;outline:none}
+.sheet textarea:focus{border-color:#3d8bfd}
+
+/* 数据页 */
+.heat{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,12px);gap:3px;margin-top:10px}
+.heat i{width:12px;height:12px;border-radius:3px;background:#141b24;border:1px solid #1d2733}
+.heat i.l1{background:#1d4a6b;border-color:#1d4a6b}
+.heat i.l2{background:#2b7ab0;border-color:#2b7ab0}
+.heat i.l3{background:#3fa0dd;border-color:#3fa0dd}
+.heat i.l4{background:#6fc7ff;border-color:#6fc7ff}
+.weak{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:13.6px}
+.weak:last-child{border-bottom:0}
+.weak .n{margin-left:auto;color:var(--bad);font-size:12px;white-space:nowrap}
+
+/* 底部提示 */
+.toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);background:#1f2836;
+  border:1px solid #35455a;padding:10px 18px;border-radius:12px;font-size:13.5px;opacity:0;
+  transition:.25s;z-index:80;box-shadow:var(--sh)}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.kbd{display:inline-block;padding:1px 6px;border-radius:5px;background:#0d1218;border:1px solid var(--line);
+  font-size:11px;color:var(--dim);margin:0 2px}
+.hint{font-size:12px;color:var(--dim2);margin-top:12px}
+.hr{height:1px;background:var(--line);margin:18px 0}
+details.acc summary{cursor:pointer;color:var(--dim);font-size:13.5px;padding:6px 0}
+details.acc[open] summary{color:var(--fg)}
+.footer{text-align:center;color:var(--dim2);font-size:11.5px;margin-top:28px;line-height:1.9}
+
+/* ---------- 证据与元信息 ---------- */
+.metarow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 18px 12px}
+.item .metarow{margin:5px 0 0}
+.sheet-in .metarow{margin:0 0 10px}
+.ev{font-size:10.5px;padding:2px 7px;border-radius:6px;white-space:nowrap;font-weight:700;letter-spacing:.2px}
+.ev.eA{background:rgba(61,220,151,.14);color:#6ee7b7;border:1px solid rgba(61,220,151,.35)}
+.ev.eB{background:rgba(77,163,255,.14);color:#8cc8ff;border:1px solid rgba(77,163,255,.35)}
+.ev.eC{background:rgba(255,184,77,.14);color:#ffcb85;border:1px solid rgba(255,184,77,.35)}
+.age{font-size:10.5px;padding:2px 7px;border-radius:6px;background:rgba(56,189,248,.12);color:#7dd3fc;border:1px solid rgba(56,189,248,.3)}
+.upd{font-size:10.5px;padding:2px 7px;border-radius:6px;background:rgba(167,139,250,.13);color:#c4b5fd;border:1px solid rgba(167,139,250,.3)}
+.key-mark{font-size:10.5px;padding:2px 7px;border-radius:6px;background:rgba(255,159,67,.14);color:#ffc078;border:1px solid rgba(255,159,67,.35);font-weight:700}
+.ev-note{margin:10px 18px 0;font-size:12.5px;color:var(--dim);line-height:1.7}
+.ev-note b{color:#9fb0c4}
+
+/* ---------- 速览 / 前沿 ---------- */
+.skim{padding:10px 0;border-bottom:1px dashed var(--line);cursor:pointer}
+.skim:last-child{border-bottom:0}
+.skim:hover .st{color:var(--acc)}
+.skim .st{font-size:14.6px;font-weight:650;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.skim .sp{font-size:13px;color:var(--dim);margin-top:3px;line-height:1.65}
+.fresh{display:flex;gap:12px;padding:12px 0;border-bottom:1px dashed var(--line);cursor:pointer}
+.fresh:last-child{border-bottom:0}
+.fresh .fy{font-size:12px;font-weight:800;color:var(--acc);background:#0f141b;border:1px solid var(--line);border-radius:8px;padding:4px 8px;height:26px;flex:0 0 auto}
+.fresh .fmain{flex:1;min-width:0}
+.fresh .st{font-size:14.4px;font-weight:650;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.fresh .sp{font-size:13px;color:var(--dim);margin-top:3px;line-height:1.66}
+.fresh .fl{font-size:11.5px;color:var(--dim2);margin-top:4px}
+.body,.pts,.mis,.sp,.tt{overflow-wrap:anywhere}
+
+/* ---------- 手机适配 ---------- */
+.tabs{overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+html{overflow-x:hidden}
+body{padding-bottom:env(safe-area-inset-bottom)}
+@media (max-width:560px){
+  .top-in{padding:10px 14px}
+  .top .sub{display:none}
+  .logo{font-size:16px}
+  .tabs{padding:0 12px 8px;gap:4px}
+  .tab{padding:7px 12px;font-size:13px;white-space:nowrap}
+  .wrap{padding:14px 12px 80px}
+  .card{padding:15px 13px}
+  .hero{padding:18px 15px}
+  .h1{font-size:23px}
+  .title{font-size:18.5px;margin:12px 13px 6px}
+  .body{padding:0 13px;font-size:15px;line-height:1.78}
+  .pts{margin:12px 13px 0}
+  .pts li{font-size:14px}
+  .mis{margin:12px 13px 0}
+  .q-wrap{padding:14px 13px 15px}
+  .metarow{margin:0 13px 10px}
+  .ev-note{margin:10px 13px 0}
+  .study-head{padding:12px 13px}
+  .stat{gap:8px}
+  .stat .v{font-size:19px}
+  .sheet{padding:12px 8px}
+  .sheet-in{padding:15px}
+  .tools{gap:6px}
+  .tools input[type=search]{min-width:120px;flex:1 1 100%}
+  .sel{padding:8px 10px;font-size:13px}
+  .item{padding:11px 12px;gap:9px}
+  .subj-line{gap:7px}
+  .subj-line .nm{width:42px;font-size:12.5px}
+  .subj-line .pc{width:auto;font-size:11px;white-space:nowrap}
+  .done{padding:26px 14px}
+  .toast{left:12px;right:12px;transform:translateY(16px);bottom:16px;text-align:center}
+  .toast.on{transform:translateY(0)}
+}
+
+/* ================= v2 视觉升级 ================= */
+body{
+  background:
+    radial-gradient(900px 480px at 15% -120px,rgba(77,163,255,.16),transparent 60%),
+    radial-gradient(800px 460px at 88% 0%,rgba(255,91,110,.10),transparent 62%),
+    radial-gradient(1100px 600px at 50% 110%,rgba(74,222,128,.06),transparent 60%),
+    var(--bg);
+  background-attachment:fixed;
+}
+.card{
+  background:linear-gradient(180deg,#1d2531 0%,#1a212b 100%);
+  border:1px solid #2a3442;
+  box-shadow:0 10px 30px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.035);
+}
+.hero{background:linear-gradient(165deg,#202a38 0%,#1a212b 62%);border-color:#31404f}
+.hero:after{content:"";position:absolute;left:0;right:0;top:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--acc),transparent);opacity:.55}
+.hero-main{display:flex;align-items:center;gap:18px;margin-top:8px}
+.hero-txt{flex:1;min-width:0}
+.hero-ring{flex:0 0 auto}
+.bignum{font-style:normal;font-size:1.16em;
+  background:linear-gradient(135deg,#a5e0ff,#4da3ff);-webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;color:transparent}
+.c-fit{color:var(--fit)} .c-acc{color:var(--acc)}
+.stat .v{font-variant-numeric:tabular-nums;letter-spacing:-.4px}
+.stat .v .u{font-size:12px;color:var(--dim2);font-weight:600;letter-spacing:0}
+
+/* 环形进度 */
+.ringwrap{position:relative;width:112px;height:112px}
+.ring{width:112px;height:112px;transform:rotate(-90deg);display:block}
+.ring .rbg{fill:none;stroke:#1a2230;stroke-width:8}
+.ring .rfg{fill:none;stroke:#4da3ff;stroke-width:8;stroke-linecap:round;
+  filter:drop-shadow(0 0 6px rgba(77,163,255,.55));transition:stroke-dashoffset .7s ease}
+.rlabel{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.rlabel b{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.3px}
+.rlabel span{font-size:10px;color:var(--dim2);margin-top:1px;letter-spacing:.4px}
+
+/* 记忆钩子 */
+.hook{margin:10px 18px 0;padding:10px 14px;border-radius:12px;border-left:3px solid var(--fit);
+  background:linear-gradient(90deg,rgba(255,159,67,.15),rgba(255,159,67,.02));
+  display:flex;flex-direction:column;gap:2px}
+.hook .hk{font-size:10px;letter-spacing:2px;color:#ffbe7a;font-weight:700}
+.hook .ht{font-size:17px;font-weight:800;letter-spacing:.4px;color:#fff3e2;line-height:1.45}
+
+/* 动效 */
+.fadein{animation:fadeUp .3s cubic-bezier(.2,.7,.3,1) both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.fb.ok b{display:inline-block;animation:pop .32s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes pop{from{transform:scale(.9);opacity:.5}to{transform:none;opacity:1}}
+.fb.no{animation:shake .36s ease-in-out}
+@keyframes shake{10%,90%{transform:translateX(-2px)}30%,70%{transform:translateX(3px)}50%{transform:translateX(-3px)}}
+.done .big{animation:pop .45s cubic-bezier(.2,1.4,.4,1) both}
+.done-ring{display:flex;justify-content:center;margin-bottom:8px}
+
+/* 组件精修 */
+.tab.on{background:linear-gradient(135deg,#28323f,#1e2733);border-color:#39485a;
+  box-shadow:0 2px 12px rgba(0,0,0,.3)}
+.btn.primary{background:linear-gradient(135deg,#2f7ef0,#57b0ff);border-color:#4da3ff;
+  box-shadow:0 8px 22px rgba(47,126,240,.30);color:#04101c}
+.btn.primary:active{transform:translateY(1px) scale(.995);box-shadow:0 4px 12px rgba(47,126,240,.25)}
+.opt{border-color:#2b3644;background:#161d27}
+.opt:hover:not(.lock){transform:translateY(-1px);box-shadow:0 6px 16px rgba(0,0,0,.25)}
+.opt:active:not(.lock){transform:translateY(0)}
+.opt.correct{box-shadow:0 0 0 1px rgba(61,220,151,.4),0 6px 18px rgba(61,220,151,.12)}
+.opt.wrong{box-shadow:0 0 0 1px rgba(255,107,107,.35)}
+.prog>i{background:linear-gradient(90deg,#2f7ef0,#5fb6ff);box-shadow:0 0 10px rgba(77,163,255,.55)}
+.item{transition:.16s}
+.item:hover{transform:translateY(-1px)}
+.bar>i{box-shadow:0 0 8px rgba(255,255,255,.12)}
+.subj-line .nm{font-weight:700}
+.mis{background:rgba(255,107,107,.08);border-style:solid;border-width:1px}
+.title{letter-spacing:-.2px}
+.footer{opacity:.8}
+
+/* 滚动条 */
+@media (min-width:641px){
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:#2b3644;border-radius:8px;border:2px solid var(--bg)}
+  ::-webkit-scrollbar-track{background:transparent}
+}
+
+/* 手机细化 */
+@media (max-width:560px){
+  .hero-main{gap:10px;align-items:flex-start}
+  .ringwrap,.ring{width:86px;height:86px}
+  .rlabel b{font-size:14.5px}
+  .rlabel span{font-size:9px}
+  .hook{margin:8px 13px 0}
+  .hook .ht{font-size:15.5px}
+  .btn.primary{padding:13px 18px}
+  .opt{padding:13px 13px}
+}
+
+/* v3：加练与休息提示 */
+.hook.rest{background:linear-gradient(90deg,rgba(148,163,184,.14),rgba(148,163,184,.02));border-left-color:#94a3b8}
+.hook.rest .hk{color:#a9b6c6}
+.hook.rest .ht{color:#cbd6e4}
+.updline{margin-top:12px;padding-left:12px;border-left:2px solid #33415a;font-size:13.5px;line-height:1.7}
+.updline .ud{display:inline-block;font-size:11.5px;color:#8fa2bb;margin-right:8px;font-variant-numeric:tabular-nums}
+.updline b{color:#e7eef7;font-size:13.5px}
+.umuted{color:#a9b6c6;margin-top:3px;font-size:13px;line-height:1.75}
+/* ---------- v4：举个例子 / 新手先这样 ---------- */
+.eg{
+  margin:14px 0 4px;padding:14px 16px 12px;border-radius:14px;
+  background:linear-gradient(180deg,rgba(56,189,248,.10),rgba(56,189,248,.04));
+  border:1px dashed rgba(56,189,248,.34);
+}
+.eg .egk{
+  display:inline-block;font-size:11.5px;font-weight:800;letter-spacing:.4px;
+  color:#7dd3fc;padding:2px 8px;border-radius:999px;
+  background:rgba(56,189,248,.16);margin-bottom:8px;
+}
+.eg .egt{font-size:15px;line-height:1.78;color:#dbeafe;overflow-wrap:anywhere}
+.eg .nb{
+  margin-top:10px;padding-top:10px;font-size:14.5px;line-height:1.7;
+  border-top:1px dashed rgba(56,189,248,.24);color:#bfdbfe;
+}
+.eg .nb b{color:#7dd3fc;font-weight:800}
+@media(max-width:560px){
+  .eg{padding:12px 13px 10px;border-radius:12px}
+  .eg .egt{font-size:14.5px;line-height:1.72}
+  .eg .nb{font-size:14px}
+}
+
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="logo"><i></i>五课学习中心</div>
+    <div class="sub" id="subtip">健身 · 拳击 · 营养 · 解剖 · 儿童</div>
+  </div>
+  <nav class="tabs">
+    <button class="tab on" data-act="tab" data-tab="home">今日</button>
+    <button class="tab" data-act="tab" data-tab="study">学习</button>
+    <button class="tab" data-act="tab" data-tab="lib">卡片库</button>
+    <button class="tab" data-act="tab" data-tab="skim">速览</button>
+    <button class="tab" data-act="tab" data-tab="stats">数据</button>
+  </nav>
+</header>
+<main class="wrap" id="app"></main>
+<div class="sheet" id="sheet"></div>
+<div class="toast" id="toast"></div>
+<script>
+window.CARDS = (window.CARDS || []).concat([
+/* ===== 健身 L1 基础 ===== */
+{id:"fit-01",s:"健身",lv:1,t:"渐进超负荷：变强的唯一硬道理",b:"身体只对「比上次更难一点」的刺激作出适应。同一重量、同一次数重复三个月，等于给身体发通知：就这样挺好，不用变。所以每次训练要么加重量、要么加次数、要么加组数、要么减少组间休息、要么把动作做得更深更稳——五条里动一条，就是超负荷。",p:["超负荷不是每次都很猛，而是长期呈上升趋势","新手最早靠加次数和改动作质量进步，不必急着加重","没有记录就没有超负荷——练完记下重量×次数×组数"],m:"把「练到累」当进步，其实累不等于刺激变大，反而常是疲劳累积。",q:{a:"下面哪种做法最符合渐进超负荷？",o:["每次都练到力竭、第二天酸得走不动","上周卧推 60kg×8×3，本周尝试 60kg×9×3","为保险起见，半年都用同一个重量"],i:1,w:"同重量多完成一次，就是刺激提高；力竭和酸痛不是进步指标。"}},
+{id:"fit-02",s:"健身",lv:1,t:"强度、容量与 RM",b:"强度指重量相对你极限的百分比，容量指总工作量（组数×次数×重量）。增肌的黄金区间通常在 6–15 次、接近但不必到力竭；练力量用 1–5 次大重量、长休息；练耐力用 15 次以上。RM 就是「这个重量你最多能做几次」，8RM 大约相当于极限的 75–80%。",p:["容量≈驱动力，强度≈质量，两者都要有，但别同时堆满","每组留 1–3 次余力，技术进步比力竭更重要","单块肌群每周 10–20 组是常见有效范围"],m:"只看重量不看次数，导致同样 5 组却练成了「5 组 × 2 次」，容量太低。",q:{a:"想主要提高最大力量，训练安排更接近哪种？",o:["1–5 次大重量、组间休息 3–5 分钟","20 次轻重量、休息 30 秒","15 次中等重量连续 10 组不休息"],i:0,w:"大重量低次数配合充分休息，才能让神经系统高质量输出。"}},
+{id:"fit-03",s:"健身",lv:1,t:"复合动作优先",b:"深蹲、硬拉、卧推、推举、划船、引体这些多关节动作，一次动用大量肌肉和稳定肌，单位时间的刺激效率最高。先用复合动作占据训练主体，再用孤立动作（弯举、侧平举）补短板，是性价比最高的顺序。",p:["每次训练先做大动作，体力最好时保证技术","复合动作训练到的稳定肌，孤立动作替代不了","新手 4–6 个复合动作就能练全身"],m:"一上来先做 5 组弯举，等到深蹲时已经没力气——顺序反了。",q:{a:"为什么建议把深蹲放在训练最前面？",o:["深蹲比较有趣","它需要最高的神经肌肉输出和技术专注，要在体力最好时做","深蹲可以顺便当热身"],i:1,w:"高难度、高负荷动作放前面，疲劳会先毁掉技术。"}},
+{id:"fit-04",s:"健身",lv:1,t:"RPE 与 RIR：用感觉标定强度",b:"RPE 是自感用力程度（1–10），RIR 是「还能再做几次」。RPE 8 约等于还能做 2 次（RIR 2）。它的价值在于：不同日子状态不同，固定重量可能今天轻松明天吃力，用 RPE 校准能避免「硬顶到崩」。",p:["增肌常用 RPE 7–9（RIR 1–3），不必每组到 10","RPE 10 意味着再做一次就失败，偶尔用，不必常用","记录时同时写重量和 RPE，方便回看状态波动"],m:"RPE 打分凭心情，没有对照标准——建议固定用「还能做几次」来估。",q:{a:"一组做完你觉得还能再做 3 次，这组大约是？",o:["RPE 10 / RIR 0","RPE 7 / RIR 3","RPE 3 / RIR 7"],i:1,w:"还能做 3 次即 RIR 3，对应 RPE 7。"}},
+{id:"fit-05",s:"健身",lv:1,t:"动作幅度：半程不算省事，算少赚",b:"完整幅度（ROM）让肌肉在拉长位和缩短位都受力，通常带来更好的增肌效果。深蹲蹲到大腿接近平行、卧推触胸、引体下放到手臂伸展，都是「有效幅度」。用超重半程换数字，只是自我安慰。",p:["拉长位受力对增肌尤其重要，别怕下放段","幅度受关节活动度限制时，先改善活动度再加重","宁可减重做全程，也别加重做半程"],m:"为了多做几个而缩短幅度，长期看是「用更大的重量练更少的活」。",q:{a:"关于训练幅度，哪种说法正确？",o:["幅度越大越容易受伤，所以半程更安全","完整幅度通常刺激更充分，可用减重换取全程","幅度与效果无关，只看重量"],i:1,w:"合理范围内的全程幅度刺激更完整；减重量换幅度是常见取舍。"}},
+{id:"fit-06",s:"健身",lv:1,t:"向心、离心、等长",b:"肌肉缩短发力叫向心（如推起），拉长受力叫离心（如下放），长度不变叫等长（如平板支撑）。离心阶段能承受更大张力，也是肌肉酸痛和适应的重要来源，所以「慢慢下放」是有依据的，通常下放 2–3 秒。",p:["控制离心 2–3 秒，比甩上去砸下来有效得多","等长训练适合康复早期和核心稳定","纯粹靠惯性完成的次数，刺激打折"],m:"只关心「推起来」，下放任其自由落体，等于扔掉了最有价值的一半。",q:{a:"卧推时把杠铃从胸口推起，属于哪种收缩？",o:["离心收缩","向心收缩","等长收缩"],i:1,w:"肌肉缩短、克服阻力完成动作，是向心收缩。"}},
+{id:"fit-07",s:"健身",lv:1,t:"组间休息：不是越短越好",b:"休息太短，下一组质量崩塌，总容量反而下降。大重量复合动作通常休息 2–5 分钟；中等重量增肌组 1.5–3 分钟；孤立小肌群 60–90 秒即可。判断标准：下一组能不能保持同样次数和技术。",p:["练力量优先保证组间恢复，别怕「休息太久」","想省时间可用超级组（两个不冲突动作交替）","心率还没降下来就上大重量，是常见受伤场景"],m:"把「喘得厉害」当成训练强度，其实只是在练心肺，不是练肌肉。",q:{a:"深蹲 5×5 大重量，组间休息更合理的是？",o:["30 秒，追求泵感","3 分钟左右，保证下一组质量","10 分钟，越久越好"],i:1,w:"大重量复合动作需要 ATP-CP 恢复，2–5 分钟是常见区间。"}},
+{id:"fit-08",s:"健身",lv:1,t:"热身与冷身：省不得的十分钟",b:"热身分两步：一般热身（5 分钟低强度有氧升温）+ 专项热身（用空杆或轻重量做目标动作，逐步加到工作重量）。冷身以低强度活动和轻拉伸为主，帮助心率回落，不必做长时间静态拉伸。",p:["热身组不是「浪费组数」，是让技术和组织进入状态","训练前动态活动优于长时间静态拉伸","冷身重点是把呼吸和心率带下来"],m:"直接上最大重量，是肩袖和腰最常见的受伤剧本。",q:{a:"正式深蹲 100kg 之前，最合理的是？",o:["直接上 100kg，节省体力","先空杆、40kg、70kg 各做几组逐渐加重","先静态拉伸大腿 10 分钟再上"],i:1,w:"逐级递增的热身组能唤醒神经、检查状态，也是最安全的路径。"}},
+/* ===== 健身 L2 结构与进阶 ===== */
+{id:"fit-09",s:"健身",lv:2,t:"训练分化：全身、上下肢、推拉腿",b:"分化是把不同肌群安排到不同日子。每周能练 2–3 天选全身训练；3–4 天选上下肢；4–6 天选推/拉/腿。核心原则是：每块肌群每周被练到 2 次左右，且两次之间留够 48 小时恢复。",p:["频率比花样重要：同一肌群每周 2 次优于 1 次","分化方式要匹配你的可训练天数，不是越复杂越专业","连续两天练同一大肌群，通常恢复不够"],m:"照抄五分化计划但一周只去三天，结果每块肌肉两周才练一次。",q:{a:"一周只能练 3 天，比较合适的是？",o:["胸背腿肩手五分化","全身训练或上下肢分化","只在周日一次练 3 小时"],i:1,w:"天数少时用全身或上下肢分化，能保证频率与恢复。"}},
+{id:"fit-10",s:"健身",lv:2,t:"频率与每周组数",b:"「每周每肌群 10–20 组」是增肌的常见有效区间，新手偏下限、进阶偏上限。组数要算「有效组」——接近力竭、动作到位的组。把 20 组塞进一天，后 10 组质量已经很低，不如分成两次。",p:["分散到 2–3 次训练，比一次性堆完更有效","有效组指 RIR≤3 的组，热身组不算","组数增加要有恢复能力跟上，否则是慢性透支"],m:"盲目冲 30 组，结果睡眠变差、力量下降，还以为是「练得不够」。",q:{a:"关于每周组数，哪种更合理？",o:["每个肌群每周 10–20 个有效组，分 2–3 次完成","一个肌群一天做 30 组，一周一次","组数越多越好，没有上限"],i:1,w:"有效组有恢复成本，分散安排能兼顾容量与质量。"}},
+{id:"fit-11",s:"健身",lv:2,t:"力竭：不是必修课",b:"每组都练到完全力竭，会显著抬高疲劳和恢复成本，收益却不比「留 1–3 次余力」更大。把力竭留给孤立动作的最后一组，或大动作的收尾组，是更聪明的做法。",p:["大部分组留 1–3 次余力，技术更稳、恢复更好","力竭组的价值主要在最后几组，不必每组都拼","力量训练（1–5 次）更不该频繁力竭"],m:"把「每组都练到推不动」当勤奋，实际在消耗下周的训练质量。",q:{a:"增肌训练中，力竭应该怎么用？",o:["每组都必须力竭才有效","多数组留 1–3 次余力，个别收尾组可接近力竭","完全不能接近力竭"],i:1,w:"接近力竭已能提供足够刺激，全员力竭主要增加疲劳。"}},
+{id:"fit-12",s:"健身",lv:2,t:"力量与增肌：目标不同，处方不同",b:"练力量：大重量（85% 以上）、低次数（1–5）、长休息、动作少而精；练增肌：中等重量（65–85%）、6–15 次、中等休息、动作多、容量足。两者不冲突，但主目标要明确，否则两头都不讨好。",p:["力量靠神经适应，增肌靠机械张力与代谢压力","新手期两者可以同时进步（新手红利）","想增肌却只做 3 次大重量，容量往往不够"],m:"用「力量测试」的方式练增肌，或反过来用高次数练最大力量。",q:{a:"以增肌为主要目标，更合适的安排是？",o:["每组 1–3 次、接近 1RM","每组 6–15 次、每周总量充足","每组 30 次以上、极轻重量"],i:1,w:"中等次数区间兼顾张力与容量，是增肌的高效区间。"}},
+{id:"fit-13",s:"健身",lv:2,t:"技术变形是疲劳的红灯",b:"一组动作里，如果出现腰塌、膝内扣、耸肩、身体乱晃，说明目标肌群已经带不动了——继续做只是让代偿肌和关节顶上去。看到变形就该结束这组，而不是「再挤两个」。",p:["技术崩坏那一下之前的次数，才是有效次数","录像回看是发现代偿最便宜的办法","宁可总次数少两个，也不要留一个错误动作记忆"],m:"为了完成计划次数，硬顶到动作全变形，练的是受伤概率。",q:{a:"做到第 9 次时腰开始明显塌，应该？",o:["咬牙再做 3 次凑够 12 次","结束这组，下次用能保持技术的重量","加重量逼自己突破"],i:1,w:"技术崩坏意味着刺激已转移，继续做风险大于收益。"}},
+{id:"fit-14",s:"健身",lv:2,t:"进阶的五种旋钮",b:"当动作稳定后，可以拧的五颗旋钮：加重量、加次数、加组数、缩短休息、提高动作质量（更深、更慢、更稳）。一次只拧一颗，拧完观察 2–4 周。全都同时拧，你分不清是什么起了作用。",p:["新手优先加次数和动作质量，进阶再加重量","每次只改一个变量，才能判断效果","把「更慢的离心」当作不加重量的进阶方式"],m:"今天加重量、加组数、还缩短休息，进步了也不知道为什么。",q:{a:"想在不加重量的情况下继续进步，最直接的旋钮是？",o:["减少睡眠","增加次数或提高动作质量","换一个更轻的器械"],i:1,w:"次数、组数、动作质量、休息时间，都是不加重也能提高刺激的旋钮。"}},
+{id:"fit-15",s:"健身",lv:2,t:"平台期与减载周",b:"连续几周重量和次数都上不去，先别急着换计划。常见原因是疲劳积累、睡眠不足、热量不够。减载周（把重量或组数降到 60–70%，维持一周）常能让下一个周期重新突破。",p:["平台期先查三件事：睡眠、热量、训练量是否过量","减载不是偷懒，是把疲劳清掉以兑现适应","减载期保持动作和频率，只降量降强度"],m:"一遇平台就换新计划，结果每次都在「重新适应」里打转。",q:{a:"训练 8 周后力量停滞、睡眠变差，最该先做的是？",o:["再加 10 组","安排一周减载，降低量或强度","换一套完全不同的动作"],i:1,w:"疲劳掩盖了适应，减载后往往能立刻回到上升曲线。"}},
+{id:"fit-16",s:"健身",lv:2,t:"核心训练：抗伸展、抗旋转",b:"核心的主要工作是「不让躯干乱动」，而不是狂做卷腹。三类动作最有用：抗伸展（平板支撑、死虫）、抗侧屈（侧桥）、抗旋转（帕洛夫推）。胸廓与骨盆保持对齐，力量才能从腿传到手。",p:["平板支撑质量看骨盆是否下沉、腰是否塌","深蹲硬拉本身就是最好的核心训练之一","每天几百个卷腹，对腰椎未必友好"],m:"只练腹直肌「六块」，却忽略了侧向和旋转稳定。",q:{a:"帕洛夫推（Pallof press）主要训练什么？",o:["抗旋转能力","胸大肌厚度","小腿爆发力"],i:0,w:"对抗绳索的旋转拉力、保持躯干正对前方，是典型抗旋转训练。"}},
+/* ===== 健身 L3 应用与安全 ===== */
+{id:"fit-17",s:"健身",lv:3,t:"分清「好痛」与「坏信号」",b:"肌肉训练后的酸胀（延迟性酸痛）多在 24–72 小时出现，属正常。要警惕的是：关节深处的锐痛、刺痛、放射到手脚的麻、夜间痛醒、伴随肿胀。出现后者应停练该动作并就医，而不是「练开了就不痛了」。",p:["酸痛位置在肌肉、钝、可活动；损伤痛常锐、局限、怕负重","疼痛评分持续上升是必须停的信号","带伤硬练不会「练好」，只会练成慢性"],m:"用「练热了就不疼」当作可以继续的证据。",q:{a:"下面哪种情况最应该停止训练并就医？",o:["练腿后第二天大腿酸胀","卧推时肩前侧刺痛并放射到手臂","三个月没练，第一次练后全身酸"],i:1,w:"锐痛伴放射提示神经或关节结构问题，需要专业评估。"}},
+{id:"fit-18",s:"健身",lv:3,t:"深蹲的常见错误",b:"深蹲要点：脚掌三点着地、膝与脚尖同向、髋膝同时屈、脊柱中立、重心落在足中。常见错误是膝内扣、脚跟离地、骨盆后倾「屁股眨眼」、以及为了蹲深而弓腰。",p:["膝内扣常提示臀中肌力量不足或重量过大","脚跟离地多与踝背屈活动度不足有关","深度以能保持脊柱中立为界，不追求极限深"],m:"为了「蹲得深」而塌腰，腰椎承受的剪切力大幅上升。",q:{a:"深蹲时膝盖向内塌陷，最可能的原因之一是？",o:["臀中肌力量不足或重量超出控制","鞋底太薄","深蹲不需要膝踝活动度"],i:0,w:"臀中肌负责髋外展与外旋，力量不足时膝容易内扣。"}},
+{id:"fit-19",s:"健身",lv:3,t:"硬拉：髋主导还是膝主导",b:"传统硬拉是髋主导的铰链动作：屈髋把臀往后送、背部中立、杠贴腿起。罗马尼亚硬拉（RDL）更强调腘绳肌离心拉伸。硬拉伤腰的根源多是「用腰当杠杆」——腰一动，重量就全压在腰椎上。",p:["起杠前先「拉紧」：背部收紧、杠贴腿、腋下夹紧","腰背中立优先于「起得多重」","RDL 下放到腘绳肌明显拉伸即可，不必触地"],m:"弓背起杠，再大的重量也是在拿腰椎赌运气。",q:{a:"硬拉时腰背出现明显弯曲，说明？",o:["这是正常发力方式","核心与背部未能维持中立，应减重或调整技术","说明重量太轻"],i:1,w:"脊柱中立是硬拉的底线，弓背会把负荷转嫁给腰椎。"}},
+{id:"fit-20",s:"健身",lv:3,t:"卧推与肩部安全",b:"卧推要肩胛后缩下沉、脚踩实、杠下放到胸骨中下部、肘部约 45–75 度夹角。肘部完全外展成 90 度、肩胛散开，是肩前侧疼痛的常见来源。肩部不适时可换哑铃、调整握距或降低幅度。",p:["肩胛稳定是卧推安全的前提","宽握加大肩关节压力，窄一点通常更友好","有肩伤史可先用哑铃卧推，轨迹更自由"],m:"躺着耸肩推，肩袖长期在高压力位置工作。",q:{a:"卧推时肘部完全外展成 90 度，主要风险是？",o:["增加肩关节前侧压力","让胸肌发力更多","提高稳定性"],i:0,w:"过度外展使肩关节处于不利位置，肩袖与关节囊压力上升。"}},
+{id:"fit-21",s:"健身",lv:3,t:"有氧与力量的安排：干扰效应",b:"有氧和力量同一天做时，先做力量再做有氧，通常更利于力量与肌肉增长。大强度长时间有氧会占用恢复资源，出现「干扰效应」。想两头兼顾，可把有氧放在不练腿的日子，或练完后做 20–30 分钟低强度。",p:["同一天训练：力量在前，有氧在后","高强度间歇与大重量训练尽量隔开 6 小时以上","走路是最不容易干扰恢复的有氧"],m:"每天先跑 10 公里再练腿，然后疑惑为什么力量不长。",q:{a:"同一天既要练力量又要有氧，更合理的顺序是？",o:["先有氧再力量","先力量再有氧","随便，没区别"],i:1,w:"先做力量可保证高质量输出，有氧放在后面影响较小。"}},
+{id:"fit-22",s:"健身",lv:3,t:"补剂：只谈证据强的",b:"证据较扎实的只有几样：肌酸（3–5 g/天，提升力量与瘦体重）、咖啡因（训练前 30–60 分钟，提升表现）、蛋白粉（本质是方便补蛋白）、β-丙氨酸（对 1–4 分钟高强度有效）。其余多数产品缺乏可靠证据。补剂是「补充」，不替代饮食与睡眠。",p:["肌酸无需冲击期，每天 3–5 g 长期即可","补剂效果排序远低于训练、总热量、蛋白、睡眠","有基础疾病或服药，先问医生"],m:"指望靠一堆补剂弥补睡 5 小时、蛋白吃不够的现实。",q:{a:"下面哪种补剂证据相对最充分？",o:["肌酸","左旋肉碱","各种「燃脂丸」"],i:0,w:"肌酸是研究最充分、效果最稳定的运动补剂之一。"}},
+{id:"fit-23",s:"健身",lv:3,t:"恢复：睡眠是免费的性能增强",b:"睡眠不足会降低力量输出、增加饥饿感、拖慢恢复、抬高受伤风险。7–9 小时是多数成年人的目标区间。除睡眠外，恢复手段还有：充足蛋白与热量、低强度活动、压力管理。按摩和冰浴只是锦上添花。",p:["连续几天睡 5 小时，训练表现会明显下滑","睡前减少强光与咖啡因，比任何恢复仪器都有效","休息日不是「不训练」，是让适应发生"],m:"训练计划排得完美，却每天只睡 5 小时——瓶颈从来不在计划。",q:{a:"训练表现突然下滑、食欲上升，最可能的原因是？",o:["训练量不够","睡眠不足或热量赤字过大","补剂吃少了"],i:1,w:"睡眠与能量供应不足会同时影响表现与食欲调节。"}},
+{id:"fit-24",s:"健身",lv:3,t:"新手 12 周路线（可直接照做）",b:"第 1–4 周：每周 3 次全身训练，学动作模式（蹲、铰链、推、拉、核心），重量以能做 10–12 次为准。第 5–8 周：加入上下肢分化或维持全身，每个动作每周加一点点。第 9–12 周：增加容量、引入 RPE，第 10 周安排一次减载。全程记录每次的重量与次数。",p:["前四周目标是把动作做对，不是把重量做大","每周至少进步一次（重量或次数）","第 12 周回看记录，你会看到一条真实的进步曲线"],m:"第一个月就上大重量、动作全靠模仿，后面全在还债。",q:{a:"新手前 4 周最该优先保证的是？",o:["动作模式正确、能稳定重复","尽快挑战 1RM","每天换一套新动作"],i:0,w:"动作质量是后续所有负荷的地基，前四周应优先建立模式。"}}
+]);
+
+window.CARDS = (window.CARDS || []).concat([
+/* ===== 拳击 L1 站架与基础 ===== */
+{id:"box-01",s:"拳击",lv:1,t:"站架：一切都从这里开始",b:"正架（右撇子常用）左脚在前、右脚在后，两脚与肩同宽略前后错开，后脚跟微抬。重心落在两脚之间偏前脚掌，膝盖微屈。双手抬起：前手拳在眼前一拳距离、后手拳贴住下巴侧，肘部自然下垂护住肋部，下巴内收、眼睛从拳套上方看出去。",p:["脚是根：脚掌不稳，出拳就没有力量","下巴内收、肩膀放松，紧张会让你更快累","前手既是武器也是雷达，别让它垂下来"],m:"站得像立正——两脚平行、重心居中、双手低垂，等于把下巴和肋部都交出去。",q:{a:"正架站架中，后脚跟的状态通常是？",o:["完全踩实，重心全在后脚","微微抬起，便于移动和转体","踮得很高，像跳芭蕾"],i:1,w:"后脚跟微抬能让蹬地转髋更顺，但抬太高会失去稳定。"}},
+{id:"box-02",s:"拳击",lv:1,t:"步法：滑动，不交叉",b:"拳击的移动是「滑步」：前脚先迈一小步，后脚跟上同样的距离，两脚间距保持不变；后退时相反。任何时候都不要交叉腿——交叉的那一瞬间你既不能发力，也不能躲。移动时双脚不离地太远，始终贴着地面滑。",p:["往哪走，哪边的脚先动：向前先动前脚，向后先动后脚","永远保持站架宽度，别把脚并拢，也别迈太大","移动中拳架不散，眼睛不离对手"],m:"像跑步一样交叉步前进，重心一乱，一拳就被打飞。",q:{a:"向前滑步时，正确的顺序是？",o:["后脚先跟、前脚再迈","前脚先迈一小步，后脚跟进同样的距离","两脚同时跳起"],i:1,w:"前脚先动、后脚跟上，才能保持站架与平衡。"}},
+{id:"box-03",s:"拳击",lv:1,t:"1 号拳：刺拳 Jab",b:"刺拳是前手直拳，拳击里使用频率最高的拳。作用有三：试探距离、干扰节奏、为后手重拳开路。要点：从站架直接前送，手臂不先收回再出；肩膀微送、拳心转下、呼气，打完立刻收回原位。它不需要很大力量，需要的是快和准。",p:["刺拳是尺子，用来量对手的距离","打完必须收回，出拳不收是最大的破绽","用前脚轻蹬、身体微前送，而不是只伸手臂"],m:"把刺拳当重拳抡，动作一大就慢，慢的刺拳等于送反击。",q:{a:"刺拳最主要的作用是？",o:["一击 KO 对手","测距、干扰、为后手拳创造机会","纯粹为了好看"],i:1,w:"刺拳的价值在速度、控制和节奏，它是最常用的「探路拳」。"}},
+{id:"box-04",s:"拳击",lv:1,t:"2 号拳：后手直拳 Cross",b:"后手直拳是拳击最有力量的单拳，力量来自后脚蹬地、髋部旋转、肩部送出的链条，而不是手臂。出拳时后脚跟外转、髋转向前、后肩送出，拳沿直线打到对手下巴。打完立刻回到护头位置，别停在半空。",p:["力量顺序：脚→髋→肩→拳，手臂只是最后一节","出拳时下巴要贴住前肩，别把头露出去","打空了更危险，收拳要快"],m:"只用手臂推，拳看着快，其实没有力量，还容易失衡。",q:{a:"后手直拳的力量主要来自？",o:["手臂肱三头肌","后脚蹬地转髋、肩部旋转的链条","腰往后仰"],i:1,w:"拳击的力量是地面反作用力经下肢、髋、躯干、肩传到拳面。"}},
+{id:"box-05",s:"拳击",lv:1,t:"3 号拳：前手勾拳 Hook",b:"勾拳是横向弧线拳，打击目标是下颌侧面、太阳穴、肋部。以正架为例，前手勾拳：肘部抬起约与肩同高、前臂与地面接近平行、以肘为轴横向甩出，同时前脚掌内转、髋部跟着转。幅度要小，像甩门一样干脆。",p:["勾拳用「转」而不是「抡」，弧线要短","肘抬起来，拳心朝内，别把拳垂在下面","勾拳打肋部时身体略下沉"],m:"把勾拳抡成大摆拳，动作大、回收慢，正好被对手抓住。",q:{a:"前手勾拳（3 号拳）的关键发力方式是？",o:["手臂大幅抡摆","肘部抬起、以前脚掌和髋部旋转带动","手腕发力"],i:1,w:"勾拳是旋转型拳法，髋与脚的转动是动力来源。"}},
+{id:"box-06",s:"拳击",lv:1,t:"上勾拳 Uppercut",b:"上勾拳从下往上打，目标是下巴和腹部。要领：膝盖微屈下沉、拳心朝自己、以小臂垂直向上打出，力量来自腿部蹬伸和躯干上顶，而不是甩手臂。打腹部时下巴内收护好自己。",p:["下沉再上顶，别只是抬手","拳心朝内、贴着身体中线上打，路线短","上勾拳常在近身时使用"],m:"站着不动只甩手，上勾拳变成「拍下巴」，没有威力。",q:{a:"上勾拳的发力更依赖？",o:["腿部蹬伸与躯干上顶","手腕快速甩动","肩膀后拉"],i:0,w:"上勾拳由下而上，需要屈膝蓄力后蹬伸发力。"}},
+{id:"box-07",s:"拳击",lv:1,t:"出拳的旋转与呼气",b:"每一拳都伴随身体旋转和呼气。出拳时短促呼气（不是憋气），能稳定躯干、提高速度；收拳时吸气。转体是力量来源：前手拳转前肩、后手拳转后髋。呼吸乱了，动作就散了，体力也掉得快。",p:["出拳呼气、收拳吸气，节奏自然","憋气出拳会让血压骤升、动作僵硬","组合拳时呼吸要跟每一拳配合，别中途漏气"],m:"出拳全程憋着气，打三拳就开始头晕。",q:{a:"出拳时的呼吸方式更合适的是？",o:["屏住呼吸发力","出拳时短促呼气、收拳吸气","一直大喊"],i:1,w:"呼气能稳定核心、维持节奏，也是拳击里最基本的呼吸法。"}},
+{id:"box-08",s:"拳击",lv:1,t:"护手位置与视线",b:"双手始终在「能挡住来拳」的位置：前手拳略高于眼睛、后手拳贴住下巴侧，肘部收紧护肋。视线从两个拳套之间看出去，看对手胸口和肩膀（比看拳更快预判）。打出一只手时，另一只手必须守住。",p:["出拳的手出去，另一只手绝不能跟着下垂","看对手躯干比盯拳头更早发现动作","肘部贴肋，能挡住大部分身体击打"],m:"打一拳就把双手都放下来「歇一下」，是新手被打中的第一原因。",q:{a:"出前手刺拳时，后手应该？",o:["也放下来放松一下","保持贴住下巴的护头位置","伸出去增加长度"],i:1,w:"一手出拳一手守，是拳击防守的基本原则。"}},
+/* ===== 拳击 L2 组合与防守 ===== */
+{id:"box-09",s:"拳击",lv:2,t:"1-2：最基础的连击",b:"1-2 就是刺拳接后手直拳。刺拳迷惑、占位、打开对手防线，后手直拳跟进打空档。要点：第一拳打完立刻回收的同时第二拳已启动，两拳之间没有停顿；第二拳打完重心回到站架，不要整个人扑上去。",p:["两拳是一个动作，不是两个动作","1-2 打完要能马上防守或移动，别停在前倾姿势","刺拳打出的同时后手已经开始转髋"],m:"打完 1 号再想 2 号，中间隔了半秒，对手早防住了。",q:{a:"1-2 连击的核心要点是？",o:["两拳之间要有明显停顿","两拳连贯成一个动作，打完立刻回防","第二拳要尽量抡大"],i:1,w:"连击的威胁在于节奏连贯，停顿会让对手有时间反应。"}},
+{id:"box-10",s:"拳击",lv:2,t:"组合拳的节奏与呼吸",b:"典型组合如 1-2-3-2（刺拳-后直-前勾-后直）。组合的长度以你能保持技术为限，通常 3–5 拳。每一拳的旋转要衔接：上一拳的转体顺势变成下一拳的起点。组合打完立刻移动或防守，不要站在原地「欣赏」。",p:["组合最后一定要有收尾动作：撤离或防守","3 拳组合比 6 拳乱打更实用","打空、打偏时更要收得快"],m:"一口气打十拳，后面几拳又慢又飘，等于送给对手反击机会。",q:{a:"组合拳打完后最该做的是？",o:["站在原地看效果","立刻移动或回到防守姿势","把双手放下喘气"],i:1,w:"组合结束后是对手最容易反击的时刻，必须立刻脱离或防守。"}},
+{id:"box-11",s:"拳击",lv:2,t:"格挡与拍击",b:"格挡（block）是用拳套或前臂挡住来拳，最省力也最稳；拍击（parry）是用手掌轻拍来拳改变方向，能创造反击机会，但要求时机准。对付直拳用格挡或拍击，对付勾拳用拳套护住侧面，对付身体击打用肘部下沉。",p:["格挡优先于躲闪：能挡住就别硬躲","拍击要「轻拍偏转」，不是用力打掉","挡完立刻反击，防守和进攻是一体"],m:"看见拳来了就闭眼、后仰、双手乱挥——三种都容易挨打。",q:{a:"面对对手的直拳，较稳妥的处理方式是？",o:["闭眼后仰","用拳套格挡或轻拍偏转，同时准备反击","低头往前冲"],i:1,w:"格挡与拍击都能在不失去平衡的前提下化解直拳。"}},
+{id:"box-12",s:"拳击",lv:2,t:"闪躲与摇避",b:"闪躲（slip）是上身侧移让拳从耳边擦过，只动头和上身，脚下不动；摇避（bob and weave）是屈膝下沉、走 U 形从拳下绕过。两者都要保持视线，眼睛不能闭；身体动，拳架不能散。",p:["闪躲幅度只要「刚好让拳过去」，别甩到失去平衡","屈膝下沉而不是弯腰驼背","闪完立刻回到中线，别停在侧面"],m:"弯腰低头躲拳，结果正好把后脑暴露出来。",q:{a:"闪躲（slip）时，身体哪部分在动？",o:["整个身体后跳","上身躯干侧移，脚下基本不动","只有手臂"],i:1,w:"slip 靠躯干侧屈让拳走空，脚下保持站架以便随时反击。"}},
+{id:"box-13",s:"拳击",lv:2,t:"后撤与反击",b:"后撤步（step back）是向后滑一步脱离攻击范围，撤的同时保持拳架。反击（counter）是「对手出拳的瞬间」打回去——这是拳击最高效的得分方式，因为对手此时防守最松。常见组合：对手打刺拳，你拍开后直接后手直拳。",p:["撤退不是转身逃跑，边退边保持能打能防","对手出拳时是他最脆弱的时候","反击要快、要短，一次一两拳就够"],m:"一直后退不敢反击，最后被逼到角落——退是为了反击。",q:{a:"反击的最佳时机通常是？",o:["对手防守站稳时","对手出拳、防线出现空档的瞬间","自己体力最好时随便打"],i:1,w:"对手出拳时注意力在前、防守有缝隙，是反击的黄金窗口。"}},
+{id:"box-14",s:"拳击",lv:2,t:"三种距离",b:"远距离（out-box）：靠刺拳和步法控制，双方都难打到；中距离：1-2、勾拳的主战场，也是得分最多的区域；近距离（in-fight）：贴身勾拳、上勾拳、搂抱与推开。高手会在三种距离间切换，把对手拖进他不擅长的距离。",p:["用刺拳和步法把对手挡在远距离","中距离要能连贯出拳，不能站着对看","贴身时肘部收紧、下巴藏好，别让对手打出上勾"],m:"永远站在同一个距离，对手两回合就摸清你的全部套路。",q:{a:"中距离（medium range）最适合使用？",o:["只用后手直拳","刺拳、直拳与勾拳的组合","完全不能出拳"],i:1,w:"中距离是多数组合拳的有效射程，也是得分核心区域。"}},
+{id:"box-15",s:"拳击",lv:2,t:"合法击打部位与禁区",b:"拳击只允许用拳峰（握拳的前部）击打对手身体正面与侧面、腰带以上部位，包括头面部正面与侧面。严禁：后脑、后颈、肾脏（腰背）、裆部、喉部、以及用掌心/手腕/肘击打。这些不是「脏」，是会造成严重伤害的违规动作。",p:["只打腰带以上、身体正面与侧面","后脑与后颈是绝对禁区，会造成脑损伤","实战中同样遵守，别用「习惯动作」害人"],m:"觉得打后脑「不算犯规只要裁判没看见」，这是在拿别人的大脑冒险。",q:{a:"下面哪个部位在拳击中属于禁区？",o:["下颌正面","后脑与后颈","腹部正面（腰带以上）"],i:1,w:"后脑与后颈是绝对禁止击打的部位，风险极高。"}},
+{id:"box-16",s:"拳击",lv:2,t:"沙袋、手靶、影子拳是三种不同的练习",b:"沙袋练力量、耐受和组合的「打进感」；手靶练准确度、时机、距离和教练给的节奏；影子拳练动作形态、步法和想象对手。三者不能互相替代：只打沙袋会变成「抡拳」，只打靶会依赖引导。",p:["沙袋不要一直全力，3 分钟全力会把动作打变形","打靶时听指令出拳，练的是反应与精度","影子拳对着镜子练，最能纠动作"],m:"每天只打沙袋，打了半年动作还是散的，因为没有反馈。",q:{a:"想纠正出拳动作形态，最合适的练习是？",o:["全力打沙袋","对镜子的影子拳","跑步"],i:1,w:"影子拳没有阻力、能看清自己的动作，配合镜子最有效。"}},
+/* ===== 拳击 L3 训练与实战 ===== */
+{id:"box-17",s:"拳击",lv:3,t:"跳绳：拳击手的必修课",b:"跳绳练的是小腿弹性、脚踝稳定、节奏与心肺，四者都是拳击的底层能力。入门从双脚并跳开始，进阶做交替跳、双摇。每次 3 分钟一组、组间 30–60 秒，与回合制一致。",p:["先求稳和节奏，别一开始就追求双摇","落地用前脚掌，膝盖微屈缓冲","3 分钟一组，模拟回合节奏"],m:"跳得像在砸地板，膝盖和跟腱先受伤。",q:{a:"拳击里跳绳的主要价值是？",o:["表演花式","练脚踝弹性、节奏与回合制心肺","替代力量训练"],i:1,w:"跳绳同时训练小腿弹性、脚步节奏和有氧耐力，与拳击需求高度匹配。"}},
+{id:"box-18",s:"拳击",lv:3,t:"影子拳：最便宜的技术课",b:"空手对空气出拳，想象一个真实的对手：他出拳你要防、你打完要移动。重点是动作完整、节奏真实、不做无意义的空挥。每天 3 回合、每回合 3 分钟，是拳击手最基础的日常。",p:["想象对手，才有「防守」和「移动」的意义","对着镜子看：拳架有没有掉、下巴有没有露","每回合专注一个小目标，比如「今天只练刺拳收拳」"],m:"影子拳打成甩手舞，动作越练越错。",q:{a:"影子拳练习时最该注意什么？",o:["出拳越快越好","想象真实对手、保持拳架与防守意识","手越放松越好"],i:1,w:"影子拳的目的是把技术刻进身体，需要在想象对抗中保持完整动作。"}},
+{id:"box-19",s:"拳击",lv:3,t:"条件实战：限制规则的对抗",b:"条件实战（conditioned sparring）只允许部分动作，例如「只打刺拳」「只能防守不能还手」「只打身体」。它把对抗强度降下来，让你在真实压力下练单一技术。这是从打靶到自由实战之间最安全的桥梁。",p:["练什么就限制什么，别的都禁止","强度以「能保持技术」为准，不是拼命","和比你稍强的人练，进步最快"],m:"跳过条件实战直接自由对打，容易养成乱打和害怕出拳的习惯。",q:{a:"条件实战的主要目的是？",o:["尽快分出胜负","在受控条件下专注练某一项技术","表演给观众看"],i:1,w:"限制规则让对抗聚焦于特定技术，降低受伤与失控风险。"}},
+{id:"box-20",s:"拳击",lv:3,t:"回合制体能：3 分钟一回合",b:"业余拳击每回合 3 分钟、回合间休息 1 分钟。体能训练要匹配这个节奏：短时间高强度 + 短休息。跳绳、打沙袋、冲刺跑都可以按 3:1 做。纯长跑能提高基础耐力，但替代不了回合制的无氧能力。",p:["练「3 分钟能保持技术」的能力，而不是「能跑很久」","间歇训练：30 秒全力 + 30 秒慢，重复 10 轮","体能差的时候，动作一定先崩，这是最早的信号"],m:"只练慢跑，上台两回合就喘到抬不起手。",q:{a:"更贴近拳击比赛需求的体能训练是？",o:["每天慢跑 10 公里","3 分钟高强度 + 1 分钟休息的间歇训练","只做静态拉伸"],i:1,w:"拳击是间歇性无氧运动，训练要复现回合的强度-休息结构。"}},
+{id:"box-21",s:"拳击",lv:3,t:"缠手与护具",b:"缠手绷带固定腕关节和掌指关节，减少击打时的手部损伤，通常 3.5–4.5 米。护齿保护牙齿与下颌、减少脑震荡风险；头盔在业余训练中常见，但研究显示它主要防面部裂伤，对脑震荡保护有限。手套要按体重和用途选：训练手套比比赛手套厚。",p:["缠手要缠住腕部和掌骨，不是只缠手心","护齿必须戴，便宜且救命","手套松了要换，松手套会伤手"],m:"不缠手直接打沙袋，手腕扭伤是新手最常见的伤。",q:{a:"拳击缠手绷带最主要的作用是？",o:["装饰","固定腕部与掌指关节，减少击打损伤","增加出拳重量"],i:1,w:"缠手提供腕部与掌骨的支撑，是保护手部结构的关键装备。"}},
+{id:"box-22",s:"拳击",lv:3,t:"常见伤病与红线",b:"拳击最常见的伤：手腕/指关节扭伤（缠手不当、打空）、肩袖劳损（出拳过多）、肋部挫伤、鼻出血，以及最需要警惕的脑震荡。脑震荡信号：头痛、头晕、恶心、记忆模糊、对光敏感、反应变慢。出现任何一个，立即停止对抗并就医。",p:["被击中后头晕恶心，当天不能再练，也不要「睡一觉看看」","反复脑震荡会累积，年轻不等于恢复快","手腕疼先停打沙袋，查缠手和出拳角度"],m:"把「头晕一下就好」当小事，继续打完剩下两回合。",q:{a:"被击中后出现头晕、恶心、反应变慢，应该？",o:["休息五分钟继续打","立即停止并就医，当天不再对抗","喝点水硬撑"],i:1,w:"这些是脑震荡的典型信号，必须停止并接受评估。"}},
+{id:"box-23",s:"拳击",lv:3,t:"规则基础：业余与职业",b:"业余（奥运体系）：男子 3 回合 × 3 分钟、戴头盔（部分赛事已取消）、10 分制但更看重有效击中数；职业：回合数依级别 4–12 回合、不戴头盔、更强调击倒。共同点：只打腰带以上正面与侧面、倒地后不能再打、被读秒后需站起并示意能继续。",p:["两种规则都禁止击打后脑、裆部、喉部","被击倒后裁判读秒，站起后由裁判判断能否继续","了解规则不是为了钻空子，是为了保护自己和对手"],m:"用职业比赛的方式在业余训练里对打，强度完全错配。",q:{a:"关于击打部位，业余与职业规则的共同点是？",o:["都允许打后脑","都只允许击打腰带以上、身体正面与侧面","都不允许打头部"],i:1,w:"两条体系在击打部位上基本一致，禁区相同。"}},
+{id:"box-24",s:"拳击",lv:3,t:"12 周入门路线（可直接照做）",b:"第 1–3 周：站架、滑步、刺拳，每天影子拳 3 回合。第 4–6 周：加入后手直拳与 1-2，开始轻打沙袋（3 分钟×3）。第 7–9 周：学勾拳、上勾、格挡与闪躲，配合手靶。第 10–12 周：条件实战（只打刺拳/只防守），加入 3:1 间歇体能。全程每周至少 1 天完全休息。",p:["前 3 周不出重拳，先把脚和手的位置练对","每周录像一次自己的影子拳，比对上周","条件实战前，先确认教练在场并戴好护具"],m:"第一周就想打实战，结果动作全是乱的，还落下一身伤。",q:{a:"拳击入门前 3 周最该练的是？",o:["重拳力量","站架、滑步、刺拳等基础动作","直接自由实战"],i:1,w:"基础动作决定后续所有技术的质量，前几周应以形态和步法为主。"}}
+]);
+
+window.CARDS = (window.CARDS || []).concat([
+/* ===== 营养 L1 基础 ===== */
+{id:"nut-01",s:"营养",lv:1,t:"能量平衡：一切的地基",b:"体重变化≈摄入热量 − 消耗热量。消耗包括基础代谢（约占 60–70%）、食物热效应（约 10%）、身体活动（其余）。吃得多于消耗，体重上升；少于消耗，体重下降。这不是「减肥理论」，是物理学。所有饮食法（低碳、断食、生酮）最终都通过同一个杠杆起作用：热量。",p:["先算总热量，再谈营养素比例，顺序不能反","运动消耗常被高估，吃进去的热量常被低估","体重每天波动 1–2 kg 是水分，不是脂肪"],m:"相信「某种食物负热量」，于是放心吃，热量悄悄超标。",q:{a:"决定体重长期变化的最根本因素是？",o:["吃的食物种类","能量摄入与消耗的差值","进食时间"],i:1,w:"各类饮食法的差异主要在依从性和主观感受，最终仍由能量平衡决定。"}},
+{id:"nut-02",s:"营养",lv:1,t:"三大营养素与热量系数",b:"碳水与蛋白各 4 kcal/g，脂肪 9 kcal/g，酒精 7 kcal/g。按体重算常见区间：蛋白 1.6–2.2 g/kg，脂肪 0.8–1.2 g/kg（不低于 0.5），其余热量给碳水。先定蛋白和脂肪，剩下的碳水按训练量补足。",p:["蛋白先定（保护肌肉），脂肪保底（激素与吸收），碳水补足剩余","同样的热量，蛋白高的餐更扛饿","食物标签上的热量允许有误差，别抠到个位数"],m:"先算碳水再补蛋白，结果蛋白永远吃不够。",q:{a:"同样 1 克，热量最高的是？",o:["碳水","蛋白","脂肪"],i:2,w:"脂肪 9 kcal/g，约为碳水和蛋白（各 4）的两倍多。"}},
+{id:"nut-03",s:"营养",lv:1,t:"蛋白质：量与分配",b:"增肌或减脂期保肌，蛋白建议 1.6–2.2 g/kg 体重/天；减脂热量缺口大时可靠近上限 2.0–2.4。分 3–5 餐、每餐 20–40 g 效果更好。优质来源：蛋、奶、鱼、禽、瘦肉、大豆制品。植物蛋白需注意氨基酸互补。",p:["蛋白是最该优先达标的营养素","每餐有蛋白，比晚上一次性补一大份更有效","高龄或大缺口减脂者适当提高"],m:"只算总蛋白不看分配，早餐几乎零蛋白，晚上狂补。",q:{a:"增肌期蛋白摄入的常见推荐范围是？",o:["0.5–0.8 g/kg","1.6–2.2 g/kg","4–5 g/kg"],i:1,w:"1.6–2.2 g/kg 是研究支持较充分的增肌与保肌区间。"}},
+{id:"nut-04",s:"营养",lv:1,t:"碳水：训练表现的燃料",b:"碳水是中等以上强度训练的主要燃料，以糖原形式储存在肌肉和肝脏。训练量大的人需要更多碳水（可达 4–6 g/kg 甚至更高），久坐者可以低一些。优先选全谷物、薯类、豆类、水果，训练前后可用易消化的精细碳水。",p:["碳水不是敌人，是训练的燃料","训练前 1–3 小时吃易消化碳水，训练更有力","低碳初期掉的是水分和糖原，不是脂肪"],m:"把「不吃主食」当减脂秘诀，结果训练没力、肌肉也掉。",q:{a:"高强度训练时，身体最主要的燃料是？",o:["脂肪","碳水化合物（糖原）","蛋白质"],i:1,w:"高强度下脂肪供能速度跟不上，糖原是主要燃料。"}},
+{id:"nut-05",s:"营养",lv:1,t:"脂肪：别低于下限",b:"脂肪参与激素合成（包括睾酮）、脂溶性维生素吸收和细胞膜构成。建议占总热量 20–35%，或 0.8–1.2 g/kg。长期极低脂会带来激素与情绪问题。优先不饱和脂肪（鱼、坚果、橄榄油），限制反式脂肪。",p:["脂肪不是越少越好，太低会影响激素与恢复","每周吃两次鱼，补充 omega-3","坚果好吃但热量密度高，一把就够"],m:"为了减脂把脂肪压到极低，几个月后睾酮下降、情绪低落。",q:{a:"长期脂肪摄入过低最可能影响？",o:["激素合成与脂溶性维生素吸收","身高","骨密度一定上升"],i:0,w:"脂肪是类固醇激素原料，也参与脂溶性维生素吸收。"}},
+{id:"nut-06",s:"营养",lv:1,t:"膳食纤维与肠道",b:"成人建议每天 25–38 g 纤维。可溶性纤维（燕麦、豆类、苹果）帮助控制血糖与胆固醇；不溶性纤维（全谷物、蔬菜）促进排便。纤维增加饱腹感，是减脂期的好帮手，但突然大量增加会胀气，要逐步加。",p:["主食换成全谷物、每天多一份蔬菜，纤维自然上去","纤维要配够水，否则更便秘","补剂纤维不能替代真实食物"],m:"一天之内从 10 g 纤维跳到 40 g，然后怪自己「肠胃不好」。",q:{a:"增加膳食纤维摄入时，必须同时注意？",o:["减少饮水","逐步增加并保证饮水","完全不吃蔬菜"],i:1,w:"纤维需要水分才能发挥作用，突然大量增加易腹胀。"}},
+{id:"nut-07",s:"营养",lv:1,t:"水与电解质",b:"水分影响力量、耐力和认知。简单指标：尿液淡黄即可；训练前后各称体重，每掉 1 kg 补 1–1.5 L 水。长时间或大量出汗时补钠（淡盐水/电解质），否则只喝白水可能稀释性低钠。日常 1–2 小时训练，白水通常足够。",p:["训练前 2 小时喝 400–600 ml，训练中少量多次","大量出汗后补电解质，别只灌白水","咖啡和茶也算水分，不必刻意避开"],m:"一天只喝两杯水，还怪自己训练时头晕。",q:{a:"判断日常饮水是否充足，最简单可靠的指标是？",o:["口渴程度","尿液颜色偏淡黄","体重不变"],i:1,w:"尿液颜色是便捷的 hydration 指标，深黄提示需要补水。"}},
+{id:"nut-08",s:"营养",lv:1,t:"餐盘法：不用称也能吃对",b:"把餐盘一分为四：1/2 蔬菜水果（蔬菜为主）、1/4 优质蛋白（鱼禽蛋瘦肉豆）、1/4 主食（优先全谷物薯类），外加一拇指大小的健康脂肪。这套比例天然接近均衡热量，适合不想天天算克数的人。",p:["先夹菜和蛋白，最后盛主食，更容易吃够蛋白","外食时同样能用：菜多、肉足、饭适量","餐盘法不等于精确控制，减脂后期可能需要称重"],m:"餐盘里 3/4 是米饭和面，然后疑惑为什么总是饿。",q:{a:"餐盘法中蔬菜应占多少？",o:["约 1/4","约 1/2","可以不吃"],i:1,w:"一半蔬菜水果、四分之一蛋白、四分之一主食，是餐盘法的核心比例。"}},
+/* ===== 营养 L2 应用 ===== */
+{id:"nut-09",s:"营养",lv:2,t:"减脂：缺口多大才合理",b:"每周减 0.5–1% 体重是较稳的速度（70 kg 的人约 0.35–0.7 kg/周），对应每天 300–700 kcal 缺口。缺口太小进展慢，太大则肌肉流失、代谢适应、依从性差。减脂期蛋白提到 2.0 g/kg 左右、保留力量训练，是保肌关键。",p:["用周平均体重看趋势，别被单日波动骗","减脂不是「越狠越快」，肌肉和代谢都在成本里","每 8–12 周安排维持期，缓解疲劳"],m:"每天只吃 800 kcal，两周掉了 3 kg，然后暴食反弹 5 kg。",q:{a:"较合理的减脂速度是？",o:["每周减 5% 体重","每周减 0.5–1% 体重","每月减 0.1 kg"],i:1,w:"0.5–1%/周既能保证进展，也能减少肌肉流失和代谢适应。"}},
+{id:"nut-10",s:"营养",lv:2,t:"增肌：小盈余，别乱吃",b:"增肌需要能量盈余，但不需要「脏增重」。建议在维持热量上加 10–20%（约 200–400 kcal），配合 1.6–2.2 g/kg 蛋白和渐进超负荷训练。新手一年能增 5–10 kg 肌肉已属优秀，快速增重多出来的主要是脂肪。",p:["小盈余 + 大训练量，才是增肌的效率组合","每周增重 0.25–0.5% 体重是常见目标","腰围比体重更能反映增肌质量"],m:"「增肌期随便吃」，半年增 12 kg，其中 8 kg 是脂肪。",q:{a:"增肌期的热量盈余建议是？",o:["维持热量 +10–20%","维持热量 +100%","不需要额外热量"],i:0,w:"小盈余能提供合成原料，同时避免脂肪过度堆积。"}},
+{id:"nut-11",s:"营养",lv:2,t:"训练前后的营养时机",b:"「窗口期」没有传说中那么窄。总蛋白和总热量才是主角。实用做法：训练前 1–3 小时吃含碳水和蛋白的一餐；训练后 2 小时内吃 20–40 g 蛋白加碳水即可。空腹训练的人，练后尽快补蛋白更稳妥。",p:["训练前那餐决定训练质量，别空着肚子硬练","练后一餐：蛋白 + 碳水，帮助恢复","每天蛋白总量达标，窗口期就没那么关键"],m:"为了「练后 30 分钟窗口」焦虑，却全天蛋白不达标。",q:{a:"关于训练后营养窗口，更准确的说法是？",o:["必须在 30 分钟内喝完蛋白粉，否则白练","总蛋白与总热量更重要，练后几小时内补充即可","练后不能吃东西"],i:1,w:"研究显示窗口期远比营销宣传宽松，总量与分配更重要。"}},
+{id:"nut-12",s:"营养",lv:2,t:"体重周期化：减、维持、增",b:"长期只减会疲劳、代谢适应；长期只增会脂肪堆积。按目标周期安排：增肌 3–6 个月 → 维持 4–8 周 → 减脂 8–16 周。维持期不是浪费时间，它让激素、训练表现和心理恢复，也让你看清真实体重。",p:["每减 8–12 周插一段维持期，效果更可持续","比赛或拍照前再进入严格减脂，别常年低碳","周期切换时逐步调整热量，别一天变 1000 kcal"],m:"一年 12 个月都在减脂，最后力量掉光、情绪也崩了。",q:{a:"体重周期化中，「维持期」的主要作用是？",o:["浪费时间的空档","让激素、表现和心理恢复，减少反弹","纯粹为了好看"],i:1,w:"维持期缓解饮食疲劳与代谢适应，是长期成功的组成部分。"}},
+{id:"nut-13",s:"营养",lv:2,t:"称重、估算法与误差",b:"初期用厨房秤称 1–2 周，建立「一份食物大概多少」的直觉，之后可以估算。常见误差来源：油（一勺 10 g≈90 kcal）、坚果、酱料、饮料。外食热量普遍被低估 20–40%。称重是学习工具，不是终身任务。",p:["油和酱料是隐形热量大户，优先称这两样","连续称 2 周比偶尔称一天有用","估算时宁可高估，减脂才有余量"],m:"只称米饭不称油，以为自己在吃 1500 kcal，其实 2000+。",q:{a:"家庭烹饪中最容易被低估的热量来源是？",o:["白米饭","烹调用油与酱料","白开水"],i:1,w:"一汤匙油约 90 kcal，炒菜用油常让热量大幅超标。"}},
+{id:"nut-14",s:"营养",lv:2,t:"外食、酒精与社交",b:"外食策略：优先点蒸煮烤、菜和蛋白双份、主食减半、酱料另放。酒精 7 kcal/g 且抑制蛋白合成与恢复，还会降低自控力。偶尔喝没问题，但别在关键训练期把酒精当日常。",p:["点菜先定蛋白和蔬菜，再决定主食","喝酒当天把热量预算让出来，别「喝了再吃」","训练后 24 小时内大量饮酒，恢复明显变差"],m:"「就喝一瓶」，然后配了三盘下酒菜。",q:{a:"酒精对训练的主要负面影响不包括？",o:["抑制肌肉蛋白合成","影响睡眠与恢复","提高肌肉力量"],i:2,w:"酒精不会提高力量，反而损害恢复、睡眠与合成。"}},
+{id:"nut-15",s:"营养",lv:2,t:"补剂：按证据分级",b:"A 级（证据强）：肌酸、咖啡因、蛋白粉（方便）、β-丙氨酸（短时高强度）。B 级（有条件）：硝酸盐/甜菜根（耐力）、维生素 D（缺乏者）。多数「燃脂」「排毒」「增睾」产品缺乏可靠证据。补剂永远排在饮食、睡眠、训练之后。",p:["咖啡因 3–6 mg/kg，训练前 30–60 分钟","肌酸每天 3–5 g，无需冲击期","买补剂看第三方检测标识，别买三无产品"],m:"花大钱买「燃脂丸」，却每天睡 5 小时、蛋白吃不够。",q:{a:"以下哪种补剂证据最强？",o:["肌酸","左旋肉碱","酵素"],i:0,w:"肌酸拥有大量高质量研究支持，是证据最充分的运动补剂。"}},
+{id:"nut-16",s:"营养",lv:2,t:"素食者的蛋白搭配",b:"植物蛋白同样能支持增肌，但要注意：总量略高（+10–20%）、氨基酸互补（谷物+豆类）、以及 B12、铁、锌、omega-3 的补充。大豆制品是优质完全蛋白；豌豆+米蛋白组合也接近完整。",p:["每餐搭配不同来源：豆类 + 谷物","B12 基本必须补充，铁和锌注意监测","植物蛋白消化率略低，总量可适当提高"],m:"只吃蔬菜水果「素食」，蛋白严重不足还以为很健康。",q:{a:"素食者最需要主动补充的维生素是？",o:["维生素 C","维生素 B12","维生素 K"],i:1,w:"B12 几乎只存在于动物性食物中，纯素者必须补充。"}},
+/* ===== 营养 L3 特殊与误区 ===== */
+{id:"nut-17",s:"营养",lv:3,t:"减脂平台与代谢适应",b:"体重停住几周很常见。原因：体重下降后消耗降低（代谢适应）、活动量无意识减少、摄入被低估、水分波动。应对：重新核算热量、增加日常活动（步数）、安排维持期、保证睡眠。不要一上来就再砍 500 kcal。",p:["平台期先看 2–4 周的周平均，而不是三天","先加活动量，再考虑减热量","平台有时是「身体在适应」，维持期能打破它"],m:"一遇平台就把热量砍到 1000 kcal，最后崩掉。",q:{a:"减脂遇到平台期，较合理的做法是？",o:["立刻把热量砍到极低","核对摄入、增加日常活动，必要时安排维持期","停止一切训练"],i:1,w:"先排除低估与活动量下降，再考虑进一步减热量或维持期。"}},
+{id:"nut-18",s:"营养",lv:3,t:"低体脂的代价",b:"男性低于约 8%、女性低于约 15% 体脂时，可能出现激素下降、睡眠变差、免疫力下降、情绪低落、训练表现下滑、女性月经紊乱。这是身体的自我保护。长期维持极低体脂不是健康的默认目标。",p:["比赛/拍照型极低体脂只适合短期","女性月经消失是重要警报，不是「练得好」","低体脂期要降低训练量与期待"],m:"把「越干越好」当目标，最后连训练欲望都没了。",q:{a:"长期维持极低体脂可能带来？",o:["激素水平下降、免疫与情绪问题","永久性的力量提升","更快的恢复"],i:0,w:"极低体脂会让身体进入节能与应激状态，代价是全方位的。"}},
+{id:"nut-19",s:"营养",lv:3,t:"赛前减重与碳水加载",b:"格斗类项目常需要「过磅」。脱水减重（桑拿、限水）能快速掉秤，但会损害力量、耐力和脑功能，且脱水后 24 小时内难以完全恢复。相对安全的做法是提前数周缓慢减脂，赛前只做小幅水分调整，并在专业指导下进行。",p:["脱水超过体重 3–5% 会显著影响表现","称重后补水补糖要循序渐进，别暴饮暴食","青少年和业余爱好者不建议做脱水减重"],m:"赛前三天不喝水减 4 kg，上台腿都是软的。",q:{a:"通过脱水快速减重的主要风险是？",o:["力量、耐力与认知下降","肌肉立刻增长","没有任何风险"],i:0,w:"脱水会损害循环、体温调节与神经肌肉功能，恢复也需要时间。"}},
+{id:"nut-20",s:"营养",lv:3,t:"四个常见误区",b:"①局部减脂不存在：卷腹不减肚子，减脂是全身的。②「排毒」是营销词：肝肾就是排毒系统，不需要果汁。③「燃脂心率区间」不等于只烧脂肪：总热量才是关键。④晚上吃东西不会直接变胖：看全天总量。",p:["想减肚子，靠热量缺口 + 全身训练","果蔬汁排毒不如直接吃蔬菜水果","任何「时间段禁忌」都让位于总热量"],m:"每天 200 个卷腹，肚子没小，腰先疼了。",q:{a:"关于「局部减脂」，正确的是？",o:["练哪里就减哪里的脂肪","减脂是全身性的，不能定点减","只有跑步能减脂"],i:1,w:"脂肪动员是全身性的，局部训练不能定向消耗该部位脂肪。"}},
+{id:"nut-21",s:"营养",lv:3,t:"抽筋与电解质",b:"运动性抽筋多与疲劳、既往抽筋史、强度突增有关，电解质只是其中一环。预防：循序渐进增加负荷、充分热身、训练前中后补水补钠。单纯补镁或香蕉并不能「保证不抽筋」。",p:["抽筋先想「练太猛/太累」，别只怪缺钾","长时间大量出汗，补含钠饮品","反复抽筋要排查药物与疾病因素"],m:"一抽筋就狂吃香蕉，然后下次照样抽。",q:{a:"运动性抽筋最常相关的因素之一是？",o:["肌肉疲劳与强度突增","吃太多蔬菜","喝水太多"],i:0,w:"疲劳与不习惯的负荷是抽筋的常见诱因，电解质是其中一部分。"}},
+{id:"nut-22",s:"营养",lv:3,t:"训练日与休息日的微调",b:"一个简单做法：训练日碳水高一些（+30–50 g），休息日略低、蛋白和蔬菜不变。不必做「碳水循环」这种复杂操作，先把蛋白和总热量稳住。对多数人而言，一周总量比单日差值更重要。",p:["训练日多吃点主食，休息日少一点，蛋白恒定","别用「休息日」当放纵日","一周平均热量决定体重趋势"],m:"休息日觉得「该犒劳自己」，一顿吃掉三天的缺口。",q:{a:"训练日与休息日营养微调，最该保持不变的是？",o:["蛋白摄入量","碳水必须完全不吃","总热量必须一样"],i:0,w:"蛋白是保肌核心，应保持稳定；碳水可随训练量小幅浮动。"}},
+{id:"nut-23",s:"营养",lv:3,t:"依从性：80/20 法则",b:"能坚持 80% 的方案，胜过完美但坚持三天的方案。做法：固定 3–4 个「默认餐」降低决策成本，允许每周 2–3 次弹性进食，记录但不苛责。减脂失败最常见的原因不是知识不足，是方案不可持续。",p:["先设计一个「忙的时候也能做到」的最低版本","外食/聚餐提前留出热量预算","一周 80% 到位就够了，剩下 20% 是生活"],m:"追求 100% 完美饮食，第五天就放弃，然后自责半个月。",q:{a:"长期饮食成功最关键的因素是？",o:["方案足够严格","方案能长期坚持","每天称重 10 次"],i:1,w:"依从性决定结果，过度严苛的方案往往难以维持。"}},
+{id:"nut-24",s:"营养",lv:3,t:"什么时候该找专业人士",b:"以下情况建议找注册营养师或医生：不明原因体重骤变、长期胃肠症状、进食障碍倾向（暴食/催吐/极端限制）、慢性病（糖尿病、肾病、甲状腺）、备孕/孕期、青少年运动员。网络内容只能做科普，不能替代个体化诊疗。",p:["有基础疾病时，饮食方案必须个体化","出现暴食-补偿循环，越早求助越好","本卡内容为一般性科普，不构成医疗建议"],m:"拿着网上的「万能食谱」给自己治病，耽误了正规治疗。",q:{a:"以下哪种情况最应该寻求专业营养指导？",o:["想知道晚餐吃什么","有糖尿病并准备调整饮食","想多吃点蔬菜"],i:1,w:"慢性病需要个体化营养方案，网络科普不能替代诊疗。"}}
+]);
+
+window.CARDS = (window.CARDS || []).concat([
+/* ===== 解剖 L1 方位与组织 ===== */
+{id:"ana-01",s:"解剖",lv:1,t:"方位术语：解剖学的坐标",b:"解剖学以「解剖学姿势」为基准：直立、面向前、掌心向前。常用词：上/下、前/后、内侧（靠中线）/外侧（远离中线）、近端（靠躯干）/远端（远离躯干）、浅/深、同侧/对侧。会说这些词，才能听懂教练和医生的描述。",p:["内侧=靠近身体中线，外侧=远离中线","近端/远端只用于四肢，指离躯干远近","描述位置时先说基准，再说方向"],m:"把「内侧」理解成「身体里面」，和医生沟通时完全对不上。",q:{a:"「膝关节位于踝关节的近端」意思是？",o:["膝比踝更靠近躯干","膝比踝更靠下","膝在踝的外侧"],i:0,w:"近端指靠近躯干一端，膝在上方更靠近躯干，故为踝的近端。"}},
+{id:"ana-02",s:"解剖",lv:1,t:"三个运动平面",b:"矢状面把身体分成左右，动作是屈/伸（深蹲、弯举）；额状面分成前后，动作是外展/内收/侧屈（侧平举）；水平面分成上下，动作是旋转/水平外展（转体、髋内外旋）。几乎所有动作都在三个平面里组合发生。",p:["屈伸在矢状面，侧向动作在额状面，旋转在水平面","深蹲是矢状面主导，但需要额状面稳定","训练计划里补上旋转与侧向，才不容易「只会前后动」"],m:"只做前后方向的动作，忽略了侧向与旋转能力。",q:{a:"哑铃侧平举主要发生在哪个平面？",o:["矢状面","额状面","水平面"],i:1,w:"手臂向身体侧面抬起，属外展，发生在额状面。"}},
+{id:"ana-03",s:"解剖",lv:1,t:"关节类型与自由度",b:"球窝关节（肩、髋）三轴活动、最灵活也最不稳定；铰链关节（肘、膝）主要做屈伸；车轴关节（桡尺近端）做旋转；椭圆/鞍状关节（腕、拇指）多方向但幅度有限；平面关节（腕骨间）小幅滑动。关节结构决定它能做什么、也决定它的薄弱点。",p:["肩髋灵活但需稳定肌保护，肘膝稳定但怕侧向力","膝关节几乎只能屈伸，侧向受力容易伤韧带","了解关节类型，就知道哪些动作「不该硬掰」"],m:"拿肩关节的活动度去要求膝关节，硬掰出伤。",q:{a:"膝关节属于哪种关节？",o:["球窝关节","铰链关节","鞍状关节"],i:1,w:"膝关节主要完成屈伸，属铰链（改良铰链）关节。"}},
+{id:"ana-04",s:"解剖",lv:1,t:"起点、止点与肌肉功能",b:"肌肉通过肌腱附着于骨。通常把靠近躯干、相对固定的附着点叫起点（origin），另一端叫止点（insertion）。肌肉收缩时把止点拉向起点。判断一块肌肉的功能，看它跨过哪个关节、从哪一侧跨过——跨过关节前方多负责屈，后方多负责伸。",p:["肌肉功能由「跨哪个关节、跨哪一侧」决定","同一块肌肉在不同姿势下可能产生不同动作","训练时想「它把哪块骨拉向哪」，比背名字有用"],m:"死记肌肉名字却不理解它跨过关节的方位，换个角度就不会用了。",q:{a:"判断一块肌肉的主要功能，最关键的依据是？",o:["它的名字","它跨过哪些关节、从关节的哪一侧通过","它的大小"],i:1,w:"肌肉的力线位置决定其动作功能，名字只是提示。"}},
+{id:"ana-05",s:"解剖",lv:1,t:"三种收缩与实际应用",b:"向心收缩：肌肉缩短、克服阻力（推起）；离心收缩：肌肉被拉长但仍发力（下放），能承受更大负荷，是力量与增肌的重要刺激；等长收缩：长度不变（平板支撑）。日常动作几乎都是三者组合。",p:["离心能承受最大张力，所以「慢下放」有效","等长训练适合康复早期和稳定训练","只做向心（甩上去）会浪费一半刺激"],m:"把「发力」只理解成缩短，忽略离心阶段的训练价值。",q:{a:"缓慢下放哑铃的阶段属于？",o:["向心收缩","离心收缩","等长收缩"],i:1,w:"肌肉在受力状态下被拉长，是离心收缩。"}},
+{id:"ana-06",s:"解剖",lv:1,t:"骨、关节与软骨",b:"骨提供杠杆与保护；关节面覆盖透明软骨，减少摩擦、缓冲压力；关节囊与韧带限制过度活动；滑膜分泌滑液润滑。软骨血供差，损伤后修复能力弱，所以「磨关节」的动作要谨慎，尤其是长期高负荷 + 不良对线。",p:["软骨靠关节活动「挤压-放松」获取营养，适度活动有益","韧带损伤后松弛，关节稳定性会长期下降","骨密度靠负重与冲击刺激维持"],m:"以为关节是「用久了必然磨损」，其实对线与负荷管理更关键。",q:{a:"关节软骨的营养主要依靠？",o:["血液直接渗透","关节活动时的挤压与放松循环","肌肉供血"],i:1,w:"软骨无血管，靠关节运动产生的压力变化进行物质交换。"}},
+{id:"ana-07",s:"解剖",lv:1,t:"运动单位与募集顺序",b:"一个运动神经元及其支配的所有肌纤维构成一个运动单位。发力时遵循「大小原则」：先募集小（慢肌、耐力型）运动单位，力量需求增大再募集大的（快肌、力量型）。所以轻重量高次数练不到最大力量，大重量也练不出耐力。",p:["想练力量，必须让大运动单位被募集——需要足够大的负荷或速度","疲劳时募集阈值下降，轻重量也能「练到」但质量不同","神经适应是新手的第一次进步来源"],m:"以为「次数多就一定练到所有肌纤维」，忽略了负荷阈值。",q:{a:"按大小原则，发力增加时最先被募集的是？",o:["较大的快肌运动单位","较小的慢肌运动单位","同时全部募集"],i:1,w:"募集从小运动单位开始，随需求增加逐步召入更大的。"}},
+{id:"ana-08",s:"解剖",lv:1,t:"筋膜与结缔组织",b:"筋膜是包裹肌肉、连接各层的结缔组织网，传递力量、提供本体感觉。肌腱把力传给骨，韧带连接骨与骨。结缔组织适应慢（比肌肉慢），所以负荷要渐进。所谓「筋膜放松」更多是短期改善活动度与感觉，不是「把筋膜揉开」。",p:["肌腱与韧带适应比肌肉慢，加负荷别急","泡沫轴主要改善短期活动度与舒适感","力量训练本身就在强化肌腱与筋膜"],m:"相信「筋膜粘连必须用力揉开」，越揉越痛。",q:{a:"连接骨与骨的结缔组织是？",o:["肌腱","韧带","筋膜"],i:1,w:"肌腱连接肌肉与骨，韧带连接骨与骨。"}},
+/* ===== 解剖 L2 主要肌群 ===== */
+{id:"ana-09",s:"解剖",lv:2,t:"胸大肌与「推」",b:"胸大肌起于锁骨内侧、胸骨与肋软骨，止于肱骨大结节嵴，功能是肩关节内收、内旋、水平内收，锁骨部还可屈肩。卧推、俯卧撑、飞鸟都练它，但不同角度侧重不同束。推的动作还需要前三角肌与肱三头肌协同。",p:["上斜刺激锁骨部，平板偏胸骨部，下斜偏下部","胸大肌也参与内旋，圆肩体态常与它紧张有关","推的极限不只取决于胸，还取决于三头与肩"],m:"只做平板卧推，上胸和肩部发展明显落后。",q:{a:"胸大肌的主要功能不包括？",o:["肩关节内收与内旋","肩关节水平内收","肩关节外旋"],i:2,w:"外旋主要由冈下肌、小圆肌等肩袖完成。"}},
+{id:"ana-10",s:"解剖",lv:2,t:"背阔肌与「拉」",b:"背阔肌起于下胸椎、腰椎、髂嵴与下位肋骨，止于肱骨小结节嵴，功能是肩伸、内收、内旋。它把手臂「往下往身体拉」。引体、划船、高位下拉都练它。注意：背阔肌紧张会限制肩屈（举过头顶）。",p:["拉的动作要「用肘带」，想着肘往腰后走","背阔肌紧张是举臂受限的常见原因","划船偏水平拉（中背），下拉偏垂直拉（背阔）"],m:"拉的时候只用手臂弯举，背部几乎没参与。",q:{a:"背阔肌的主要功能是？",o:["肩关节屈曲","肩关节伸展、内收与内旋","肩关节外展"],i:1,w:"背阔肌把肱骨拉向躯干后方与内侧，是主要的「拉」肌。"}},
+{id:"ana-11",s:"解剖",lv:2,t:"三角肌三束",b:"三角肌分前、中、后三束，都止于肱骨三角肌粗隆。前束屈肩（前平举、推举前段），中束外展（侧平举），后束水平外展与伸肩（反向飞鸟）。三束功能不同，训练要分开补，否则后束最容易落后。",p:["推举主要练前束，中束靠侧平举，后束靠反向飞鸟/面拉","后束弱是圆肩与肩前痛的常见因素","侧平举时小重量、控制离心，比甩大重量有效"],m:"只做推举和侧平举，后束长期缺席。",q:{a:"三角肌中束的主要功能是？",o:["肩关节外展","肩关节内旋","屈肘"],i:0,w:"中束位于肩外侧，收缩时把手臂向侧方抬起，即外展。"}},
+{id:"ana-12",s:"解剖",lv:2,t:"肱二头肌与肱三头肌",b:"肱二头肌跨肩与肘两个关节，功能是屈肘、前臂旋后，长头还参与屈肩；肱三头肌是伸肘主力，长头跨肩参与伸肩。所以弯举时前臂旋后（掌心向上）能更多激活二头；臂屈伸时大臂保持固定，才专注三头。",p:["二头既是屈肘肌也是旋后肌","三头占上臂体积约 2/3，想手臂粗别只练二头","窄距卧推、双杠臂屈伸是高效三头复合动作"],m:"练手臂只做弯举，上臂围度上不去。",q:{a:"肱二头肌除了屈肘，还主要负责？",o:["前臂旋后","前臂旋前","伸肘"],i:0,w:"二头肌是强力的前臂旋后肌，这也是反握弯举更「有感觉」的原因。"}},
+{id:"ana-13",s:"解剖",lv:2,t:"股四头肌与臀大肌",b:"股四头肌（股直肌、股外侧肌、股内侧肌、股中间肌）伸膝，其中股直肌跨髋还屈髋；臀大肌伸髋与外旋。深蹲、腿举、箭步蹲都同时用到；臀桥、罗马尼亚硬拉更偏髋主导。膝主导与髋主导的训练要搭配。",p:["伸膝靠股四头，伸髋靠臀与腘绳","臀大肌是人体最大的肌肉，决定髋伸力量","只做腿举不练髋铰链，臀部和后链会弱"],m:"练腿只会腿举，臀部和后侧链几乎没刺激。",q:{a:"臀大肌的主要功能是？",o:["髋关节伸展与外旋","髋关节屈曲","伸膝"],i:0,w:"臀大肌把大腿向后拉，是髋伸的主力，也参与外旋。"}},
+{id:"ana-14",s:"解剖",lv:2,t:"腘绳肌与硬拉",b:"腘绳肌（半腱肌、半膜肌、股二头肌）跨髋与膝，功能是屈膝、伸髋。它既是膝屈肌又是髋伸肌，所以 RDL、腿弯举从两个方向练它。腘绳肌拉伤常见于冲刺和快速离心，热身与渐进离心训练能降低风险。",p:["RDL 练腘绳的离心与髋伸，腿弯举练屈膝","冲刺前必须充分热身腘绳肌","腘绳拉伤后复发率高，恢复要循序渐进"],m:"只做腿屈伸（股四头），腘绳肌完全不练。",q:{a:"腘绳肌的功能包括？",o:["屈膝和伸髋","伸膝和屈髋","只有屈膝"],i:0,w:"腘绳肌跨膝与髋两个关节，同时具备屈膝与伸髋功能。"}},
+{id:"ana-15",s:"解剖",lv:2,t:"小腿三头肌与踝",b:"腓肠肌与比目鱼肌合称小腿三头肌，通过跟腱止于跟骨，功能是踝跖屈（踮脚）。腓肠肌跨膝，膝伸直时更吃力；比目鱼肌不跨膝，屈膝时仍能发力。踝背屈活动度不足会影响深蹲深度和落地缓冲。",p:["直腿提踵偏腓肠肌，屈膝提踵偏比目鱼肌","跟腱是人体最粗的肌腱，也需要渐进负荷","踝背屈受限时，深蹲容易脚跟离地"],m:"只练提踵不管踝活动度，深蹲始终蹲不下去。",q:{a:"哪块小腿肌肉在屈膝状态下仍能有效发力？",o:["腓肠肌","比目鱼肌","胫骨前肌"],i:1,w:"比目鱼肌不跨膝关节，屈膝时仍能有效跖屈踝关节。"}},
+{id:"ana-16",s:"解剖",lv:2,t:"核心三层：腹直、腹斜、腹横",b:"腹直肌屈曲躯干（卷腹）；腹内/外斜肌负责旋转与侧屈；腹横肌是深层「束腰带」，通过增加腹内压稳定腰椎。三者功能不同，训练也应覆盖：卷腹/举腿、旋转（砍伐、俄罗斯转体）、抗伸展与抗旋转（平板、帕洛夫推）。",p:["腹横肌靠呼吸与腹内压训练，不是靠卷腹","旋转训练要控制速度，腰椎怕高速甩转","「核心」包括膈肌、盆底与多裂肌，不只腹肌"],m:"以为核心就是「六块腹肌」，只做卷腹。",q:{a:"腹横肌最主要的作用是？",o:["屈曲躯干","通过腹内压稳定腰椎","旋转躯干"],i:1,w:"腹横肌环绕腹部深层，收缩时提高腹内压，为脊柱提供稳定。"}},
+/* ===== 解剖 L3 应用 ===== */
+{id:"ana-17",s:"解剖",lv:3,t:"肩袖与肩关节稳定",b:"肩袖由冈上肌、冈下肌、小圆肌、肩胛下肌组成，把肱骨头「吸」在肩胛盂上。冈上肌外展启动，冈下肌与小圆肌外旋，肩胛下肌内旋。肩袖弱或疲劳时，肩关节在推举和过顶动作中最容易出问题。",p:["外旋训练（弹力带/侧卧外旋）是肩部健康的保险","过顶动作痛，先查肩袖与肩胛控制","肩袖练的是稳定，不是大重量"],m:"只练大重量推举，从不练外旋与肩胛稳定。",q:{a:"肩袖肌群中，负责肩关节外旋的主要是？",o:["冈上肌","冈下肌与小圆肌","肩胛下肌"],i:1,w:"冈下肌和小圆肌是主要的外旋肌，肩胛下肌则负责内旋。"}},
+{id:"ana-18",s:"解剖",lv:3,t:"膝关节的力学与韧带",b:"膝关节主要做屈伸，轻微旋转。前交叉韧带（ACL）限制胫骨前移，后交叉限制后移，内外侧副韧带抵抗侧向力。落地时膝内扣 + 直腿，是 ACL 损伤的高危姿势。训练股四头、腘绳、臀中肌与落地技术，能显著降低风险。",p:["落地屈髋屈膝、膝与脚尖同向，是保护 ACL 的核心","股四头与腘绳力量平衡很重要","女性 ACL 损伤率更高，与骨盆宽、落地模式有关"],m:"落地时膝盖内扣还伸直，把 ACL 放在最危险的位置。",q:{a:"前交叉韧带（ACL）的主要作用是？",o:["限制胫骨向前移位","限制踝背屈","伸膝"],i:0,w:"ACL 防止胫骨相对股骨过度前移，也限制旋转。"}},
+{id:"ana-19",s:"解剖",lv:3,t:"腰椎与髋铰链",b:"腰椎的结构适合承重与小幅活动，不适合大幅屈伸与旋转。所谓「髋铰链」就是屈髋不屈腰：臀往后送、脊柱保持中立、重量靠腿和臀承担。硬拉、RDL、壶铃摆荡都应该是铰链动作。",p:["弯腰搬重物时，先屈髋屈膝、背部中立","腰椎反复屈伸+负重，是腰伤的高风险组合","练好铰链，日常搬东西都在保护腰"],m:"弯腰直腿搬重物，用腰椎当铰链。",q:{a:"「髋铰链」动作的核心特征是？",o:["脊柱大幅屈曲","屈髋、臀部后移，脊柱保持中立","腰部旋转发力"],i:1,w:"铰链是髋关节折叠，腰椎保持中立，避免用腰代偿。"}},
+{id:"ana-20",s:"解剖",lv:3,t:"骨盆前倾：别急着「矫正」",b:"骨盆前倾本身是正常解剖变异，很多人有轻度前倾却毫无症状。「骨盆前倾导致腰痛」的说法被夸大。真正相关的是：髋屈肌紧张、臀肌与核心弱、以及整体负荷管理。没有疼痛就不必强行「矫正体态」。",p:["体态是动态的，静态照片不能定义「有问题」","疼痛与体态的相关性很弱，别自己吓自己","改善方向：加强臀肌核心、减少久坐、管理负荷"],m:"照着网络教程天天「收骨盆」，越练越焦虑。",q:{a:"关于骨盆前倾，较准确的说法是？",o:["一定会导致腰痛，必须矫正","是常见解剖变异，无症状时不必强行矫正","只能通过手术解决"],i:1,w:"轻度前倾很常见，与疼痛无必然因果，重点在功能与负荷。"}},
+{id:"ana-21",s:"解剖",lv:3,t:"肌肉不平衡与代偿",b:"当某块肌肉弱或紧张，相邻肌肉会「替它干活」，这就是代偿。常见：臀肌弱→腰部代偿伸髋；下斜方弱→上斜方耸肩；核心弱→腰部在硬拉中代偿。纠正思路：先找限制（活动度/力量/技术），再针对性补，而不是盲目「拉伸放松」。",p:["代偿不是「坏习惯」，是身体在找可行方案","先评估：活动度够不够？目标肌有没有在发力？","补弱 + 教技术，比单纯拉伸有效"],m:"哪里紧就拉哪里，拉完照旧代偿。",q:{a:"深蹲时腰先酸、臀没感觉，最可能的原因是？",o:["臀肌发力不足，腰部代偿伸髋","腰太强不需要练","深蹲不该练臀"],i:0,w:"臀肌募集不足时，竖脊肌会代偿完成伸髋，导致腰部先疲劳。"}},
+{id:"ana-22",s:"解剖",lv:3,t:"拉伸：静态与动态",b:"训练前用动态拉伸（活动关节、提高体温、模拟动作），训练后用静态拉伸（每个部位 30–60 秒）改善柔韧性。静态拉伸放在训练前会短暂降低力量输出。柔韧性提升需要长期、规律、带到略有拉伸感的范围。",p:["练前动态、练后静态，是通用原则","拉伸不能「拉长肌肉」，是提高耐受与活动度","疼痛点不要硬压，神经症状禁止拉伸"],m:"训练前静态拉伸 20 分钟，然后发现深蹲更没力。",q:{a:"训练前更合适的准备方式是？",o:["长时间静态拉伸","动态拉伸与专项热身","完全不动直接上"],i:1,w:"动态拉伸能升高体温、激活神经，不会像长静态拉伸那样降低输出。"}},
+{id:"ana-23",s:"解剖",lv:3,t:"运动链：力量如何传递",b:"人体是链条：脚→踝→膝→髋→躯干→肩→手。任何一环「漏力」，末端输出就打折。深蹲力量上不去，可能是踝背屈或胸椎活动度受限；出拳没力，可能是髋旋转与核心传递不足。训练要看链条，不只看单块肌肉。",p:["末端表现差，往回找最弱的一环","关节相邻原则：一个关节灵活，相邻关节多求稳定","全身性动作最能暴露链条短板"],m:"只练出拳的手臂，却不练髋与核心的旋转传递。",q:{a:"「运动链」观点最强调什么？",o:["每块肌肉单独训练","力量沿身体各环节传递，短板决定末端表现","只练末端肌肉"],i:1,w:"链条的强度由最弱环节决定，训练要兼顾传递效率。"}},
+{id:"ana-24",s:"解剖",lv:3,t:"疼痛不等于损伤",b:"影像上的「椎间盘突出」「肩袖撕裂」在无症状人群中也很常见。疼痛是神经系统输出的保护信号，受负荷、睡眠、压力、恐惧影响。急性期适当减负荷，但长期完全不动会让组织更不耐受。渐进暴露是康复的核心。",p:["影像结果要结合症状，别只看报告吓自己","疼痛受情绪与睡眠影响，不是纯粹的结构问题","在可承受范围内逐步恢复活动，比长期卧床有效"],m:"看到报告写「突出」就彻底不敢动，结果越来越痛。",q:{a:"关于疼痛与影像学结果，较准确的是？",o:["影像有异常就一定疼","影像异常在无症状人群中也很常见，需结合症状判断","疼痛完全是心理作用"],i:1,w:"结构改变与疼痛并非一一对应，评估要结合功能与症状。"}}
+]);
+
+/* 儿童与青少年训练 · 24 卡（按年龄段组织） */
+window.CARDS = (window.CARDS || []).concat([
+{id:"kid-01",s:"儿童",lv:1,age:"0-18",t:"儿童训练的三条底线",
+ b:"孩子不是缩小版大人：骨骼有生长板、体温调节差、注意力短。安全训练守住三条：① 先动作质量，后重量与次数；② 不痛不练、痛了就查；③ 兴趣优先，练到笑，不练到哭。任何咬牙坚持的口号都不适用于儿童。",
+ p:["生长板是薄弱环节，重复冲击与过重负荷要控量","训练要短、频、有趣，单次 20–40 分钟足够","孩子说疼、说晕、脸色发白，立即停止"],
+ m:"小孩练力量长不高——没有证据支持；受伤多来自负荷失控与无人监督，不是力量训练本身。",
+ q:{a:"下面哪一条最符合儿童训练原则？",o:["动作质量优先于重量和次数","用成人计划减半执行","练到力竭才算有效"],i:0,w:"儿童训练的第一目标是动作能力与兴趣；成人计划不能简单减半。"},
+ ev:"A",ref:"国际儿童抗阻训练共识 + AAP 体力活动指南"},
+{id:"kid-02",s:"儿童",lv:1,age:"0-3",t:"0–3 岁：练的是动作，不是肌肉",
+ b:"这个阶段重点是趴、爬、扶站、走、扔、接，这些是后续所有运动的地基。不需要器械、不需要训练课，需要的是每天充足的自由活动时间和一块地面。少用学步车，多让孩子自己爬起来、走过去。",
+ p:["每天累计至少 3 小时活动，含 1 小时中高强度","趴着玩能练颈背与上肢","光脚在地上走，足弓与平衡更好"],
+ m:"早走路不代表更聪明；学步车反而可能延迟走路并增加跌落风险。",
+ q:{a:"0–3 岁最该练的是什么？",o:["基础动作与自由活动","负重深蹲","核心稳定训练"],i:0,w:"此阶段的目标是动作启蒙与探索，不是力量或体能。"},
+ ev:"A",ref:"WHO 5 岁以下儿童身体活动指南"},
+{id:"kid-03",s:"儿童",lv:1,age:"3-6",t:"3–6 岁：基本动作技能 ABC",
+ b:"ABC 指灵敏、平衡、协调。这阶段学跑、跳、踢、投、接、滚、爬，越多样越好。像玩一样的练习最有效：跳格子、追人、扔球、单脚站。别急着教标准姿势，先让孩子敢动、会动。",
+ p:["每天至少 3 小时活动，其中 1 小时中高强度","项目多样化，别过早只练一项","用游戏化指令，比再来十次有效十倍"],
+ m:"孩子静不下来往往不是问题，是运动量不够；高质量放电比强行安静更有用。",
+ q:{a:"3–6 岁练什么最合适？",o:["多种基本动作技能","单一专项技术","器械力量"],i:0,w:"学龄前是动作技能窗口，多样化优先于专项化。"},
+ ev:"A",ref:"WHO / AAP 学龄前活动指南与动作发展研究"},
+{id:"kid-04",s:"儿童",lv:1,age:"7-9",t:"7–9 岁：协调与速度的黄金窗",
+ b:"神经系统发育快，学动作特别快，是练协调、节奏、反应的好时候。用跳绳、变向跑、球类和体操类动作打底。力量训练可以做，但以自重与技术为主，不做极限重量。",
+ p:["每周 3 次以上、每次 60 分钟中高强度活动","加入跳绳、变向、平衡练习","力量用自重练技术：深蹲、俯卧撑、引体"],
+ m:"别用早期专项化锁死一个项目；这个年龄多样化更利于长期发展。",
+ q:{a:"7–9 岁最值得投资的能力是？",o:["协调与动作学习","最大力量","乳酸耐受"],i:0,w:"此阶段神经可塑性强，动作学习效率最高。"},
+ ev:"B",ref:"青少年体能发展与早期专项化研究共识"},
+{id:"kid-05",s:"儿童",lv:1,age:"10-12",t:"10–12 岁：青春期前力量启蒙",
+ b:"青春期前（未变声、未突增）是学力量技术的窗口：动作模式干净、负荷轻、次数适中。深蹲、髋铰链、推、拉、负重行走，用自重或小重量把技术练对。技术打好了，突增期才不会一练就伤。",
+ p:["每周 2–3 次，每次 20–30 分钟","每个动作 1–3 组、8–15 次，技术优先","重点学髋铰链与深蹲，它们是力量动作的地基"],
+ m:"不要照成人计划上重量；青春期前收益主要来自神经适应与技术，不是肌肉量。",
+ q:{a:"青春期前力量训练的主要收益来自？",o:["神经适应与技术","肌肉横截面积增长","极限力量突破"],i:0,w:"激素水平限制肌肉增长，此阶段最大收获是把动作学对。"},
+ ev:"A",ref:"国际儿童抗阻训练共识（Faigenbaum 等）"},
+{id:"kid-06",s:"儿童",lv:1,age:"13-15",t:"13–15 岁：生长突增期，控制负荷",
+ b:"身高长得快时，骨长肌不长，柔韧与协调会暂时变笨，这是正常的。此时负荷要控制：少做大量跳跃与极限重量，多做技术、柔韧与核心。若出现膝前痛、跟骨痛，先减量而不是硬扛。",
+ p:["突增期避免连续高冲击训练","每周至少 2 次柔韧与活动度","力量训练保持中等负荷、规范技术"],
+ m:"长个子的痛忍忍就好——生长相关疼痛需要调整负荷并评估，不是硬撑。",
+ q:{a:"突增期最该做的是？",o:["控制冲击负荷、保技术","立刻上大重量追成绩","完全停止运动"],i:0,w:"骨头长得快、肌肉跟不上，此时最怕高冲击与失控负荷。"},
+ ev:"B",ref:"青少年生长突增期训练负荷研究"},
+{id:"kid-07",s:"儿童",lv:1,age:"16-18",t:"16–18 岁：接近成人，但别照搬",
+ b:"训练结构可以接近成人，但要留出恢复余量：骨骺尚未完全闭合、睡眠常不足、学业压力大。可以系统力量训练，但要保证技术、渐进与睡眠。避免赛前极端减重和一天两练堆量。",
+ p:["力量训练每周 2–4 次，渐进加负荷","保证 8–10 小时睡眠","比赛期减量而不是加量"],
+ m:"青少年用成人的狠练计划，短期可能出成绩，长期容易过度使用伤与倦怠。",
+ q:{a:"16–18 岁训练最容易被忽略的是什么？",o:["恢复与睡眠","动作种类","器械品牌"],i:0,w:"这个年龄最常见的错误是练得够多、恢复得不够。"},
+ ev:"B",ref:"青少年运动员训练负荷与损伤预防共识"},
+{id:"kid-08",s:"儿童",lv:1,age:"0-18",t:"年龄不是唯一标准：看生物年龄与训练年龄",
+ b:"同岁孩子发育差 2–3 年是常态。判断能不能加负荷，看三点：动作是否稳定、是否有疼痛、恢复是否跟得上。训练年龄（练了多久）比日历年龄更能决定进度。别拿别人家孩子当标尺。",
+ p:["用能不能标准完成决定进阶，而不是几岁","每 4–6 周复盘一次动作质量","发育早不等于该多练"],
+ m:"按年龄一刀切既不安全也不公平；同岁孩子的发育差可能超过两年。",
+ q:{a:"决定能否加负荷最可靠的依据是？",o:["动作质量与恢复情况","日历年龄","身高体重"],i:0,w:"动作稳、不痛、恢复跟得上，才是进阶条件。"},
+ ev:"B",ref:"青少年发育评估与训练进阶文献"},
+{id:"kid-09",s:"儿童",lv:2,age:"7-18",t:"孩子练力量安全吗？看共识怎么说",
+ b:"多项系统综述与国际共识结论一致：在合格指导、正确技术、渐进负荷下，儿童与青少年抗阻训练是安全的，能提高力量、骨密度、运动表现与自信心，不损害生长。风险来自无人监督、负荷失控与动作错误。",
+ p:["有资质指导 + 技术优先 + 渐进负荷 = 安全","训练前热身、训练后放松，别省","关节痛超过 3 天要评估"],
+ m:"力量训练伤生长板——规范训练下没有证据；失控的重复冲击才是风险来源。",
+ q:{a:"儿童抗阻训练的主要风险来源是？",o:["无人监督与负荷失控","力量训练本身","训练次数太多"],i:0,w:"共识强调的不是禁止，而是指导、技术与负荷管理。"},
+ ev:"A",ref:"国际共识与多项系统综述（Faigenbaum 等）"},
+{id:"kid-10",s:"儿童",lv:2,age:"7-18",t:"自重优先：儿童力量动作库",
+ b:"不需要器械就能练全身：深蹲、髋铰链（臀桥）、俯卧撑（可跪姿）、引体或悬垂、平板支撑、弓步、提踵。每个动作先求标准 8 次，再谈加量。器械是进阶，不是起点。",
+ p:["每次 5–6 个动作，覆盖蹲、推、拉、髋、核心","用能不能标准完成决定加不加难度","组间休息 60–90 秒"],
+ m:"让孩子做网红高难度动作是伤害高发区；难度要和当前技术匹配。",
+ q:{a:"儿童力量训练的合理起点是？",o:["自重动作与标准技术","器械极限重量","弹力带高强度间歇"],i:0,w:"自重动作能覆盖全身，且便于判断技术是否过关。"},
+ ev:"B",ref:"儿童抗阻训练动作进阶指南"},
+{id:"kid-11",s:"儿童",lv:2,age:"7-18",t:"跳跃与落地：最该教的一课",
+ b:"落地技术差是青少年膝踝损伤的常见原因。教三件事：膝盖对准脚尖、屈髋屈膝缓冲、落地声音要轻。先学落地，再学跳。每周 2 次、每次 10 分钟的神经肌肉训练，能明显降低损伤率。",
+ p:["落地要轻、稳、膝对脚尖","跳箱高度以能稳稳落地为准","把落地练习放进热身里"],
+ m:"跳得高就行——不会落地的孩子，跳得越多伤得越快。",
+ q:{a:"预防青少年膝踝损伤最有效的单项练习是？",o:["落地技术与神经肌肉训练","拉伸小腿","跑更多圈"],i:0,w:"神经肌肉训练是被反复验证的损伤预防手段。"},
+ ev:"A",ref:"神经肌肉训练预防运动损伤系统综述与共识"},
+{id:"kid-12",s:"儿童",lv:2,age:"10-18",t:"一般身体准备（GPP）：别只练专项",
+ b:"GPP 是专项之外的基础体能：力量、速度、耐力、柔韧、协调都练一点。青少年只练一项容易局部过用。每周留 2 次给非专项训练，反而能让专项成绩更好、伤病更少。",
+ p:["每周至少 2 次非专项体能","按力量、速度、耐力、柔韧轮换","专项赛季减量，而不是全停"],
+ m:"早期专项化能短期出成绩，但过度使用伤与退出率更高。",
+ q:{a:"GPP 的核心意思是？",o:["专项之外的基础体能","只练专项技术","只练力量"],i:0,w:"GPP 让身体各系统均衡发展，为专项提供底盘。"},
+ ev:"B",ref:"早期专项化与 GPP 研究"},
+{id:"kid-13",s:"儿童",lv:2,age:"6-18",t:"柔韧：不做被动硬压",
+ b:"儿童天生柔韧好，不需要压腿压到疼。静态拉伸放在训练后，动态活动度放在训练前。压腿时憋气、被成人强压，是常见错误做法，容易拉伤。柔韧的目标是够用，不是劈叉。",
+ p:["训练前做动态热身：摆腿、弓步走","训练后每个部位静态拉伸 20–30 秒","不追求劈叉式指标"],
+ m:"越疼越有效——疼痛是保护信号，不是进度条。",
+ q:{a:"柔韧训练的正确安排是？",o:["训练前动态、训练后静态","训练前静态硬压","只在比赛前拉一次"],i:0,w:"动态热身提高活动度与激活；静态拉伸更适合训练后放松。"},
+ ev:"C",ref:"柔韧训练实践指南（证据强度中等）"},
+{id:"kid-14",s:"儿童",lv:2,age:"3-18",t:"有氧：玩出来的心肺",
+ b:"孩子不需要跑步机：追跑、骑车、游泳、球类、跳绳都能练心肺。6–17 岁建议每天 60 分钟中高强度活动，每周至少 3 天有高强度与肌力骨强化活动。把运动变成日常，而不是任务。",
+ p:["每天 60 分钟中高强度，可拆分累计","每周 3 天高强度 + 3 天力量与骨强化","喘得说不出完整句子即为高强度"],
+ m:"只上技术课不做有氧，体能会拖技术后腿。",
+ q:{a:"WHO 对 6–17 岁的活动建议是？",o:["每天 60 分钟中高强度","每周 60 分钟","每天 10 分钟"],i:0,w:"每天累计 60 分钟中高强度，每周还要有力量和骨强化活动。"},
+ ev:"A",ref:"WHO 5–17 岁身体活动指南"},
+{id:"kid-15",s:"儿童",lv:2,age:"9-15",t:"膝前痛与跟骨痛：生长相关疼痛怎么办",
+ b:"Osgood-Schlatter（胫骨结节骨软骨炎）与 Sever 病（跟骨骨骺炎）常见于 9–15 岁活跃孩子：跑跳后膝下或脚跟痛，按压更痛。多数是自限性的，原则是减量不停练：减少跳跃与冲刺，加强力量与柔韧，痛到影响走路才就医。",
+ p:["疼痛不超过 3 分可继续，超过 5 分要减量","加强股四头肌与小腿力量","冰敷与合适鞋垫可缓解，别长期完全停运动"],
+ m:"疼就彻底休息三个月——过度制动会让肌肉更弱、复发更快。",
+ q:{a:"生长相关膝前痛的首选处理是？",o:["减量不停练 + 力量训练","完全停训三个月","贴膏药继续练"],i:0,w:"减量、练力量、维持活动，是这类疼痛的主流处理。"},
+ ev:"B",ref:"运动医学儿科共识与临床指南"},
+{id:"kid-16",s:"儿童",lv:2,age:"6-18",t:"热环境、脱水与运动安全",
+ b:"儿童体表面积相对大、出汗率低，比成人更容易中暑。热天运动要提前补水、每 15–20 分钟喝几口、穿透气衣服、避开正午。出现头晕、恶心、停止出汗、意识模糊，立即停止、降温、就医。",
+ p:["运动前 2 小时喝 300–500 毫升","每 15–20 分钟补 100–200 毫升","热适应需要 1–2 周逐步加量"],
+ m:"出大汗才有效——脱水会直接降低表现，并显著增加中暑风险。",
+ q:{a:"孩子运动中出现头晕、停止出汗，应该？",o:["立即停止、降温、就医","喝口水继续","坚持完成计划"],i:0,w:"停止出汗是热病危险信号，必须立即处理。"},
+ ev:"A",ref:"ACSM 运动与热病共识、儿科运动医学指南"},
+{id:"kid-17",s:"儿童",lv:3,age:"10-18",t:"格斗类项目对青少年的风险",
+ b:"拳击、散打、柔道等对抗项目对青少年有价值：纪律、体能、自卫。但风险集中在头部撞击。原则是：不安排头部重击对练、护具齐全、教练有资质、有脑震荡处理流程。出现头痛、头晕、记忆模糊，当天必须停训并评估。",
+ p:["青少年以技术与条件实战为主，避免头部连续重击","护齿、护头、缠手不可省","脑震荡后按分级重返流程，不提前复训"],
+ m:"打出来的抗打击能力——抗打击不是练出来的，是伤出来的。",
+ q:{a:"青少年对抗训练的首要安全原则是？",o:["避免头部重击与及时停训","多打实战才进步快","不用护具更真实"],i:0,w:"未经训练的头部重复受击是长期损伤的主要来源。"},
+ ev:"B",ref:"格斗项目脑震荡共识与青少年运动安全指南"},
+{id:"kid-18",s:"儿童",lv:3,age:"6-18",t:"书包、坐姿与脊柱侧弯",
+ b:"没有可靠证据表明书包重量直接导致脊柱侧弯，但过重书包会引起颈肩不适。青少年特发性侧弯多在 10–16 岁被发现，靠前屈试验初筛、X 光确诊。发现双肩不等高、一侧肩胛突出，尽早就诊。",
+ p:["书包重量不超过体重的 10–15%","双肩背、调短肩带、重心贴近背部","10–16 岁每年做一次前屈筛查"],
+ m:"坐姿不端正导致侧弯——特发性侧弯病因不明，别把责任推给孩子。",
+ q:{a:"脊柱侧弯初筛最常用的方法是？",o:["Adam 前屈试验","摸骨判断","拍视频看走路"],i:0,w:"前屈试验观察背部是否不对称，是公认的初筛手段。"},
+ ev:"B",ref:"脊柱侧弯筛查共识（SRS）与书包负荷研究"},
+{id:"kid-19",s:"儿童",lv:3,age:"6-18",t:"屏幕时间与体态：相关不等于因果",
+ b:"长时间低头看屏幕会引起暂时性颈肩不适，但没有证据说它造成永久性体态变形。真正的问题是屏幕挤掉了运动时间。与其强制挺直，不如每 30–40 分钟起身活动、每天保证户外活动。",
+ p:["每 30–40 分钟起身活动 2–3 分钟","每天户外 1 小时以上","把活动量当目标，而不是姿势标准"],
+ m:"驼背是玩手机玩的——体态是多因素结果，恐吓式纠正反而让孩子抗拒运动。",
+ q:{a:"关于屏幕与体态，最准确的说法是？",o:["相关但因果证据有限","已被证实导致驼背","与体态完全无关"],i:0,w:"横断面研究多为相关性，缺少因果证据。"},
+ ev:"C",ref:"久坐与体态相关研究（因果证据有限）"},
+{id:"kid-20",s:"儿童",lv:3,age:"6-18",t:"儿童肥胖：别用成人减脂法",
+ b:"儿童肥胖的处理原则与成人不同：不节食、不称卡路里、不追求快速掉秤。以家庭为单位调整饮食结构与活动量，目标是身高追上来（维持体重、增加身高）。极端节食会影响生长发育与心理健康。",
+ p:["目标设为维持体重 + 增加活动","全家一起改，不单独针对孩子","每月测身高体重看趋势，不看单次数字"],
+ m:"少吃就能瘦——儿童限制饮食可能导致生长受限与暴食反弹。",
+ q:{a:"学龄儿童超重，合理的首要目标是？",o:["维持体重、增加活动","快速减重 5 公斤","完全戒掉主食"],i:0,w:"儿童仍在生长，维持体重即可让身高追上，避免限制性节食。"},
+ ev:"A",ref:"AAP 儿童肥胖临床实践指南"},
+{id:"kid-21",s:"儿童",lv:3,age:"6-18",t:"补剂：儿童基本不需要",
+ b:"均衡饮食的孩子不需要蛋白粉、肌酸、支链氨基酸。真正需要关注的是维生素 D（日照不足时）、铁（青春期女生、素食者）、钙（奶制品不足时）。任何补剂都要先问医生，别拿成人配方给孩子。",
+ p:["优先食物：奶、蛋、肉、豆、蔬果","维生素 D 与铁按检测结果补","不买增高、促生长类产品"],
+ m:"吃蛋白粉才能长肌肉——儿童力量增长主要靠神经适应与技术，蛋白质从三餐就够。",
+ q:{a:"健康孩子最不需要的补剂是？",o:["蛋白粉与肌酸","日照不足时的维生素 D","缺铁时的铁剂"],i:0,w:"前两者在均衡饮食下并非必需；维生素 D 与铁按需补充才有意义。"},
+ ev:"A",ref:"儿科营养学会与运动营养共识"},
+{id:"kid-22",s:"儿童",lv:3,age:"6-18",t:"睡眠：最便宜的增肌与长个药",
+ b:"生长激素在深睡眠时分泌最多；睡眠不足会降低表现、增加食欲与受伤风险。学龄儿童需要 9–12 小时，青少年 8–10 小时。青少年生理节律天然后移，早上起不来不是懒。固定作息、睡前一小时不看屏幕最有效。",
+ p:["学龄 9–12 小时、青少年 8–10 小时","每天同一时间睡与起","睡前 1 小时无屏幕"],
+ m:"少睡多练在青少年身上只会换来更多伤病与更差成绩。",
+ q:{a:"青少年建议睡眠时长是？",o:["8–10 小时","6–7 小时","11–13 小时"],i:0,w:"学龄儿童 9–12 小时，青少年 8–10 小时。"},
+ ev:"A",ref:"AASM 儿童青少年睡眠推荐"},
+{id:"kid-23",s:"儿童",lv:3,age:"6-18",t:"教练与家长：说什么、别说什么",
+ b:"孩子对评价极度敏感。有效反馈指向过程：这次落地很稳、你坚持完成了；无效反馈指向人：你怎么这么笨、别人都行。羞辱式执教短期有效、长期摧毁动机。让孩子自己说出一个改进点，比你讲十句都有用。",
+ p:["夸过程与努力，不夸天赋","一次只给一个改进点","训练结束问今天最开心的是什么"],
+ m:"严师出高徒——高压与羞辱提高退出率，不提高长期水平。",
+ q:{a:"对孩子最有效的反馈方式是？",o:["指向过程的具体反馈","当众比较排名","指出缺点不表扬"],i:0,w:"过程反馈保护内在动机，也更容易被执行。"},
+ ev:"B",ref:"自我决定理论与青少年运动动机研究"},
+{id:"kid-24",s:"儿童",lv:3,age:"8-18",t:"8–18 岁 12 周家庭训练路线",
+ b:"每周 3 次、每次 30 分钟，不需要器械：热身 5 分钟动态活动度 → 力量 15 分钟（深蹲、俯卧撑、臀桥、弓步、平板，各 2 组 8–12 次）→ 跳跃与落地 5 分钟 → 放松 5 分钟。每 2 周加 1 次重复或 1 组，第 12 周减量一周。",
+ p:["第 1–4 周学动作，第 5–8 周加量，第 9–12 周巩固并减载","每周记录一次今天最顺的动作","疼痛超过 3 分就减量"],
+ m:"一上来就追求练到累，前三周最容易受伤；先把动作做对，再谈强度。",
+ q:{a:"这套路线第 12 周该做什么？",o:["减量一周","冲最大重量","加两次训练"],i:0,w:"周期末减载能让适应巩固，避免累积疲劳。"},
+ ev:"B",ref:"儿童抗阻训练进阶与 GPP 实践框架"},
+]);
+
+
+/* 元数据：证据等级、必会标记、更新时间、前沿速递
+ * ev: A = 强证据（教科书/指南/系统综述一致）；B = 中等证据（共识或效应中等）；C = 有限证据（机制推断/实践惯例）
+ */
+window.EVID = {
+"fit-01":["A","训练学教科书共识 + ACSM 抗阻训练立场"],
+"fit-02":["A","强度、容量、RM 的标准定义"],
+"fit-03":["B","教练与训练学共识，效应依目标而定"],
+"fit-04":["B","RPE 效度研究支持，但个体差异较大"],
+"fit-05":["A","不同幅度训练对比研究结论一致"],
+"fit-06":["A","肌肉收缩的生理学基础"],
+"fit-07":["B","研究支持，最优区间依训练目标"],
+"fit-08":["B","热身证据较强；冷身收益有限"],
+"fit-09":["B","分化方式差异小于总训练量"],
+"fit-10":["A","剂量-反应综述 + 2024 立场更新"],
+"fit-11":["B","接近力竭已足够，力竭非必需"],
+"fit-12":["A","力量与肌肥大的处方差异有共识"],
+"fit-13":["B","生物力学分析与教练共识"],
+"fit-14":["B","训练学进阶框架"],
+"fit-15":["B","减载有实践与部分研究支持"],
+"fit-16":["B","脊柱稳定性与核心训练研究"],
+"fit-17":["B","临床红旗征与运动医学共识"],
+"fit-18":["A","深蹲生物力学研究一致"],
+"fit-19":["B","技术模型共识，个体差异存在"],
+"fit-20":["B","肩关节力学与临床经验"],
+"fit-21":["B","干扰效应依安排与训练水平而定"],
+"fit-22":["A","肌酸、咖啡因、蛋白的系统综述"],
+"fit-23":["A","睡眠限制对表现影响研究一致"],
+"fit-24":["B","基于指南编排的实践方案"],
+"box-01":["A","拳击教学体系共识"],
+"box-02":["A","步法教学共识：滑动不交叉"],
+"box-03":["A","基础拳法技术共识"],
+"box-04":["A","基础拳法技术共识"],
+"box-05":["A","基础拳法技术共识"],
+"box-06":["A","基础拳法技术共识"],
+"box-07":["B","发力链的生物力学共识"],
+"box-08":["A","防守姿势教学共识"],
+"box-09":["A","组合拳教学共识"],
+"box-10":["B","教学共识，量化研究较少"],
+"box-11":["A","防守技术教学共识"],
+"box-12":["B","教学共识，个体差异较大"],
+"box-13":["B","战术教学共识"],
+"box-14":["A","距离控制是公认的战术基础"],
+"box-15":["A","规则文本明确规定"],
+"box-16":["B","教练共识：三种练习目的不同"],
+"box-17":["B","拳击体能训练传统 + 跳绳研究"],
+"box-18":["B","技术学习研究支持空击练习"],
+"box-19":["B","教学共识：限制规则降低风险"],
+"box-20":["B","间歇训练研究支持回合制体能"],
+"box-21":["B","手部损伤预防共识"],
+"box-22":["B","运动医学与脑震荡共识"],
+"box-23":["A","业余与职业规则文本"],
+"box-24":["B","基于教学体系的入门方案"],
+"nut-01":["A","能量平衡是营养学第一原理"],
+"nut-02":["A","三大营养素热量系数的标准值"],
+"nut-03":["A","蛋白质摄入 meta 分析一致"],
+"nut-04":["A","碳水与运动表现研究一致"],
+"nut-05":["A","脂肪下限有明确指南建议"],
+"nut-06":["A","膳食纤维指南一致"],
+"nut-07":["A","ACSM 水与电解质立场"],
+"nut-08":["B","行为工具，效果依执行"],
+"nut-09":["B","减脂速率建议有共识区间"],
+"nut-10":["B","增肌盈余建议有共识"],
+"nut-11":["B","总摄入比时机更重要"],
+"nut-12":["B","周期化是实践框架"],
+"nut-13":["B","估算法误差研究支持"],
+"nut-14":["B","行为与环境因素研究"],
+"nut-15":["A","补剂分级有系统综述支撑"],
+"nut-16":["B","素食蛋白搭配有研究支持"],
+"nut-17":["B","代谢适应研究结论较一致"],
+"nut-18":["B","低体脂对激素与表现的影响"],
+"nut-19":["B","赛前减重策略存在争议"],
+"nut-20":["B","常见误区有指南依据"],
+"nut-21":["B","抽筋成因研究结论不一"],
+"nut-22":["B","实践框架，个体化调整"],
+"nut-23":["B","行为科学与依从性研究"],
+"nut-24":["A","临床转介标准明确"],
+"ana-01":["A","解剖学标准术语"],
+"ana-02":["A","运动平面是解剖学基础"],
+"ana-03":["A","关节分类标准"],
+"ana-04":["A","肌肉解剖学基础"],
+"ana-05":["A","肌肉收缩类型生理学"],
+"ana-06":["A","骨与关节解剖学"],
+"ana-07":["A","Henneman 尺寸原则"],
+"ana-08":["C","筋膜研究多为机制与初步证据"],
+"ana-09":["A","肌肉解剖与功能"],
+"ana-10":["A","肌肉解剖与功能"],
+"ana-11":["A","三角肌三束解剖明确"],
+"ana-12":["A","肌肉解剖与功能"],
+"ana-13":["A","肌肉解剖与功能"],
+"ana-14":["A","腘绳肌功能与髋铰链研究"],
+"ana-15":["A","小腿三头肌与踝关节解剖"],
+"ana-16":["A","核心肌群分层解剖明确"],
+"ana-17":["B","解剖明确，功能模型仍有讨论"],
+"ana-18":["A","膝关节生物力学研究充分"],
+"ana-19":["A","腰椎负荷与髋铰链研究"],
+"ana-20":["B","矫正训练收益研究有限"],
+"ana-21":["C","代偿概念流行但证据较弱"],
+"ana-22":["B","静态与动态拉伸研究结论"],
+"ana-23":["B","运动链是生物力学模型"],
+"ana-24":["A","疼痛科学共识：疼痛不等于损伤"]
+};
+
+/* 必会卡：每科 6 张，速览页优先展示 */
+window.KEY = {
+"fit-01":1,"fit-02":1,"fit-07":1,"fit-10":1,"fit-17":1,"fit-23":1,
+"box-01":1,"box-02":1,"box-09":1,"box-15":1,"box-21":1,"box-22":1,
+"nut-01":1,"nut-03":1,"nut-09":1,"nut-15":1,"nut-20":1,"nut-23":1,
+"ana-01":1,"ana-03":1,"ana-07":1,"ana-17":1,"ana-19":1,"ana-24":1,
+"kid-01":1,"kid-05":1,"kid-09":1,"kid-11":1,"kid-20":1,"kid-22":1
+};
+
+/* 近年有实质更新的卡（用于在卡上标「近期更新」） */
+window.UPD = {
+"fit-10":2024,"fit-22":2023,"fit-23":2022,"box-22":2023,
+"nut-03":2023,"nut-15":2024,"nut-17":2023,
+"ana-24":2022,"kid-09":2020,"kid-11":2023,"kid-17":2023,"kid-20":2023
+};
+
+/* 前沿速递：近年结论变化 / 值得知道的更新（截至 2025 年整理） */
+window.FRESH = [
+{y:2024,t:"抗阻训练立场更新",b:"明确每周至少 2 次覆盖全身主要肌群，并强调训练量-反应存在明显个体差异，别照抄别人的计划。",ev:"A",card:"fit-10"},
+{y:2023,t:"蛋白质摄入的「天花板」",b:"增肌约 1.6 g/kg/天已接近平台，再高收益有限；总量与分配比补剂品牌重要得多。",ev:"A",card:"nut-03"},
+{y:2024,t:"肌酸：证据最强的补剂",b:"单水肌酸长期安全性证据充分，但不是必需；青少年不建议自行使用。",ev:"A",card:"nut-15"},
+{y:2020,t:"儿童力量训练的国际共识",b:"规范指导下抗阻训练对儿童安全有效，不损害生长；风险来自失控负荷与无人监督。",ev:"A",card:"kid-09"},
+{y:2023,t:"早期专项化的代价",b:"12 岁前单一专项与更高过度使用伤、退出率相关；多样化训练更有长期价值。",ev:"B",card:"kid-12"},
+{y:2023,t:"神经肌肉训练降低损伤",b:"以落地、变向为核心的神经肌肉训练，能显著降低青少年膝踝损伤率。",ev:"A",card:"kid-11"},
+{y:2023,t:"脑震荡：分级重返",b:"头部受击后按分级流程重返，同一天复训风险高；出现头痛、记忆模糊必须停。",ev:"B",card:"box-22"},
+{y:2023,t:"儿童肥胖：家庭行为干预优先",b:"指南强调强化行为干预与家庭参与，药物仅限特定年龄与情形。",ev:"A",card:"kid-20"},
+{y:2022,t:"睡眠是训练的一部分",b:"学龄儿童 9–12 小时、青少年 8–10 小时；睡眠不足直接拉低表现并增加受伤风险。",ev:"A",card:"kid-22"},
+{y:2022,t:"疼痛不等于损伤",b:"影像学异常在无症状人群中同样常见；疼痛需结合负荷、睡眠与心理因素综合判断。",ev:"A",card:"ana-24"}
+];
+
+/* 一句话记忆钩子：给 30 张必会卡，学习时作为「记忆锚点」高亮显示 */
+window.HOOK = {
+"fit-01":"每次比上次多一点就行",
+"fit-02":"重了就别多，多了就别重",
+"fit-07":"休息够，下一组才有劲",
+"fit-10":"一周三次，胜过一次练垮",
+"fit-17":"锐痛、怕负重：停",
+"fit-23":"睡不够，练白费",
+"box-01":"脚不稳，拳就软",
+"box-02":"迈哪边，先动哪只脚",
+"box-09":"两拳一口气，不是两下",
+"box-15":"腰带以上，正面侧面",
+"box-21":"缠腕和掌骨，不是手心",
+"box-22":"头晕恶心，当天收工",
+"nut-01":"先看总量，再谈比例",
+"nut-03":"先吃够蛋白，再谈其他",
+"nut-09":"看周趋势，不看单日",
+"nut-15":"只补能证明的：咖啡因",
+"nut-20":"减肚子，靠全身减脂",
+"nut-23":"忙的时候也能做到",
+"ana-01":"靠中线是内，远离是外",
+"ana-03":"灵活的要稳，稳的怕扭",
+"ana-07":"够重够快，才练到力气",
+"ana-17":"练外旋，是给肩上保险",
+"ana-19":"屈髋屈膝，背要直",
+"ana-24":"疼≠坏，报告要配症状",
+"kid-01":"生长板怕重复冲击",
+"kid-05":"每周两三次，二十分钟",
+"kid-09":"技术先行，慢慢加量",
+"kid-11":"落地轻、稳、膝对脚尖",
+"kid-20":"不减体重，先不再涨",
+"kid-22":"9–12 小时，长个也长力"
+};
+
+/* 内容版本与更新记录：改内容时同步改这里（v 版本号、d 日期） */
+window.VER = { v: "2026.12", d: "2026-11-24" };
+window.UPDLOG = [
+  { d: "2026-11-24", v: "2026.12", t: "每张卡补例子 + 新手第一步", b: "120 张卡各加了一段带数字的生活化例子（举个例子）和一句可执行的新手做法（新手先这样），零基础也能看懂。" },
+  { d: "2026-11-24", v: "2026.11", t: "首版 120 张", b: "五科各 24 张：健身、拳击、营养、解剖、儿童青少年（0-18 分龄）。全部标注证据等级 A/B/C，30 张必会卡，10 条前沿速递。" }
+];
+
+window.EX = window.EX || {};
+window.EX["fit-01"] = { e: "同样是深蹲 60 公斤做 8 次，上周做完你喘半天，这周做完还能说句话；下周试 60 公斤 9 次，或 62.5 公斤 8 次——这就是超负荷。让人变强的是这条缓慢上升的线，不是某一天练到吐。", n: "记下重量×次数×组数。下周只改一个数：多加 1 次，或多加 2.5 公斤。" };
+window.EX["fit-02"] = { e: "1RM 指你只能举起 1 次的极限重量。你能连做 8 次的重量，大约是这个极限的 80%。所以别人说「用 80% 强度练」，意思是挑一个你只能做 8–10 次的重量，不是随便挂两片杠铃片。", n: "先别测 1RM。用「做到 8–10 次就没力」的重量当 80%，够用了。" };
+window.EX["fit-03"] = { e: "一次深蹲同时用到大腿、臀、核心、背；一次腿屈伸只练大腿前侧一小块。时间有限时先练能带动多个关节的动作——这就是复合动作优先。", n: "每次训练先做 1–2 个复合动作（深蹲/硬拉/卧推/划船），再补孤立动作。" };
+window.EX["fit-04"] = { e: "RIR 2 意思是「还能再做 2 次才彻底没力」。你做完 8 次，感觉再推 2 次就到顶了，这组大概就是 RPE 8。新手常犯的错是每组都做到 0，结果第二天全身报废，第三天不想去。", n: "大部分组留 2 次余力（RIR 2）；只有最后一组可以拼到还剩 1 次。" };
+window.EX["fit-05"] = { e: "半程卧推是杠铃只下到一半就推起，全幅度要下到贴胸。肌肉在最被拉长的那一段刺激最强，半程恰好剪掉了这一段。所以半程不是省事，是把最值钱的部分扔了。", n: "做不满幅度就先降重量，宁可轻一点也要蹲到底、下到贴胸。" };
+window.EX["fit-06"] = { e: "深蹲往下是离心（肌肉被拉长还在发力），站起来是向心，蹲住不动是等长。下楼比上楼累、第二天大腿更酸，就是因为离心那段最伤肌肉。", n: "每个动作的下放阶段心里数 2 秒，别让重量「砸」下去。" };
+window.EX["fit-07"] = { e: "深蹲 5 组，组间只歇 30 秒，第 4 组你可能只剩 4 次；歇满 3 分钟，第 4 组还能做 5 次。力量训练买的是每组质量，不是心跳多快。", n: "大重量动作歇 2–3 分钟，小肌群歇 60–90 秒，用手机计时别凭感觉。" };
+window.EX["fit-08"] = { e: "直接上大重量像冷车地板油。热身是 5 分钟轻活动 + 关节转一转 + 用空杆和轻重量做 2–3 组递增。冷身不必拉筋，慢走 3–5 分钟让心率降下来就够。", n: "正式组前：空杆 15 次 → 一半重量 8 次 → 七成重量 5 次。" };
+window.EX["fit-09"] = { e: "全身训练是每次练全身、一周三次；上下肢分化是今天上半身明天腿；推拉腿是把推的动作、拉的动作、腿各排一天。哪种都能长，关键是每个部位一周能不能攒够组数。", n: "一周只能来 3 次就选全身训练，最简单，也最不容易漏部位。" };
+window.EX["fit-10"] = { e: "同一个部位一周练 10 组，拆成两次各 5 组，通常比一次做 10 组长得更好——因为后几组质量已经掉了。分散做比堆一天强。", n: "大肌群每周 10 组起步、分两次做；小肌群 6–8 组就够。" };
+window.EX["fit-11"] = { e: "每组都推到推不动：第 1 组质量还高，第 5 组动作已经歪了。这就是为什么多数计划不要求组组力竭——留点余力，一周能练的总量反而更大。", n: "不是最后一组就别力竭；状态特别好时，允许最后一组做到还剩 0–1 次。" };
+window.EX["fit-12"] = { e: "练力量是 3–5 次、重量大、歇 3 分钟；练围度是 8–12 次、重量中等、歇 90 秒。想掰手腕赢练前者，想穿衣服显壮练后者。方向不同，处方就不同。", n: "新手上路先按 8–12 次、3 组做 6–8 周，之后再决定偏哪边。" };
+window.EX["fit-13"] = { e: "深蹲最后一组膝盖往里扣、腰塌下去——不是你不够狠，是这块肌肉已经撑不住这个重量了。这时候再挤两次，练的是关节和腰，不是肌肉。", n: "看到动作走形就收工这一组，把这次算作「已经到位」。" };
+window.EX["fit-14"] = { e: "五个旋钮：加重量、加次数、加组数、缩短休息、增加控制与幅度。一次只能拧一个。同时加重量又加次数又减休息，第一周很爽，第三周就崩。", n: "这周只拧一个旋钮，其余保持不动；四到六周后再换一个。" };
+window.EX["fit-15"] = { e: "连续三周同一个动作举不动更多，还总觉得累、睡不好——这是身体在说该退一步。减载周把重量降四成、组数减一半，通常下一周就能破纪录。", n: "每练 4–6 周安排 1 周减载：重量不变，组数砍半。" };
+window.EX["fit-16"] = { e: "平板支撑是抗伸展（别让腰塌下去）；单手拎重物走路是抗侧屈；死虫是抗旋转。卷腹只是让身体往前弯，但搬水、抱娃、防闪腰需要的是「别弯」。", n: "每次练完加两个核心动作：平板支撑 3 组 30 秒 + 死虫 3 组每侧 8 次。" };
+window.EX["fit-17"] = { e: "昨天练腿今天上楼酸、按下去是钝钝的、动一动反而舒服些——正常。如果是某个关节一个点刺痛、一发力就窜一下、还肿还热，那是红灯。", n: "酸痛可以继续练但减量；刺痛、肿胀、夜里痛、发麻——停，别再用同一个动作试。" };
+window.EX["fit-18"] = { e: "深蹲三大错：膝盖内扣、脚跟离地、腰先塌。脚跟离地往往是脚踝背屈不够；膝盖内扣是髋部控制差。在脚跟垫个一厘米的小片，很多人当场蹲得更稳。", n: "先徒手对镜子 3 组 10 次，蹲到大腿平行，膝盖始终对着脚尖方向。" };
+window.EX["fit-19"] = { e: "硬拉像用屁股把地面推开，深蹲像坐下再站起。硬拉时小腿几乎垂直、屁股往后走；如果硬拉时膝盖弯得像深蹲，最先累的就是腰。", n: "先练髋铰链：拿根棍子贴住后脑、上背、尾骨三点，屁股往后推，棍子不能离开身体。" };
+window.EX["fit-20"] = { e: "卧推时肘部横开成一条直线、杠铃落到锁骨，肩前侧会被拧着；改成肘与身体约 45–70 度、杠铃落到乳头线附近，多数人肩膀立刻舒服。", n: "躺下先把肩胛骨往后往下收紧再推；肘别完全横开。" };
+window.EX["fit-21"] = { e: "同一天先跑 10 公里再去深蹲，腿已经空了；反过来先深蹲再跑步，配速会掉。把两种训练隔开或分天，互相拖累最小。", n: "力量和有氧分天做，至少隔 6 小时；同一天一定先练力量。" };
+window.EX["fit-22"] = { e: "证据最硬的两样：肌酸（每天 3–5 克）和蛋白粉（只在蛋白吃不够时补）。那些「燃脂丸」「速成增肌粉」的效果，通常还不如你多睡一小时。", n: "先把蛋白和总热量吃够；有余力再加肌酸 3–5 克/天，不必冲击期。" };
+window.EX["fit-23"] = { e: "同样练法，睡 5 小时的人一周后力量增长明显少于睡 8 小时的人，而且第二天更想吃高糖高油。睡眠是免费、最有效、也最常被跳过的那一项。", n: "先固定睡觉时间，保证 7 小时；睡前 1 小时别刷训练视频。" };
+window.EX["fit-24"] = { e: "第 1–4 周只学动作、重量轻，每周三次全身；5–8 周开始加重量，每组留 2 次余力；9–12 周加组数、开始记进步。急着上大重量的人，常常第三周就伤了。", n: "照「每周 3 次、每次 5 个动作、每个 3 组 8–12 次」开始，四周内别改计划。" };
+
+window.EX = window.EX || {};
+window.EX["box-01"] = { e: "站架就是你的地基：右脚稍后、左脚在前（右撇子），膝盖微屈，下巴收进去，双手护在脸侧。想象脚下踩在白线上，前脚在线上，后脚在线后——拳是从地面推上来的，脚不稳，拳就没力。", n: "对着镜子站 3 分钟：脚位、下巴、手位各检查一遍，再开始打。" };
+window.EX["box-02"] = { e: "往前走，前脚先动；往后退，后脚先动；往左，左脚先动。如果两脚交叉，重心就空了半秒——对手最喜欢抓这半秒。", n: "慢速走 20 步前、20 步后，对着镜子确认两只脚没有交叉过。" };
+window.EX["box-03"] = { e: "刺拳是前手直出直回：从鼻尖高度弹出，手臂不完全伸直，回程比出拳还快。它测距离、扰视线、开缺口。很多新手使出全身力气推，结果速度慢、收回慢，反而被打反击。", n: "空击 3 组 30 秒，只打刺拳，不求重，只求弹出去弹回来。" };
+window.EX["box-04"] = { e: "后手直拳是转出来的：后脚跟一转、髋一转、肩跟着送，拳头才走直线。只用手臂推，拳会飘、也没力。像拧毛巾一样把力量从地面拧上来。", n: "慢动作对镜 30 次，只盯两件事：后脚跟抬起转、髋跟着转。" };
+window.EX["box-05"] = { e: "勾拳走的是横向的弧线：前手抬起肘部与地面齐平、拳头从侧方扫到目标，腰胯同步转。常见错误是拳打高了变成拍，或者肘先动露出下巴。", n: "先打慢的 3 组 20 秒，重点是肘保持平、身体跟着转。" };
+window.EX["box-06"] = { e: "上勾拳是从下往上打的短拳：膝盖下沉一点再蹬，拳头贴着身体前面往对方下巴方向划弧。它适合近距离，站太远打出去就是空挥，还容易把肘甩伤。", n: "只对沙袋下段打 3 组 20 秒，蹲一点再起来，别甩手臂。" };
+window.EX["box-07"] = { e: "每一拳都是呼气的一瞬间，像「噗」一下短促地吹气，不是憋着打。憋气打拳，十拳就头晕；转髋、转肩、吐气是同一个动作，三个一起才对。", n: "空击时出拳就短促呼气，一组 30 秒，打完不头晕、不憋气。" };
+window.EX["box-08"] = { e: "双手护在颧骨侧、肘贴身护肋，眼睛从手套之间的缝隙看对手胸口和肩——看肩能提前发现对方出拳，看眼睛反而慢。打完拳手立刻回原位，不是垂下来喘气。", n: "空击 1 分钟，规定「每拳打完必须回到脸侧」，掉了就重来。" };
+window.EX["box-09"] = { e: "1-2 就是刺拳加后手直拳：第一拳把对方注意力打开，第二拳才是重拳。节奏是「啪——啪」，第二拳紧跟上，不是两拳都慢慢打。", n: "对沙袋打 3 组 10 次 1-2，两拳之间不要有停顿。" };
+window.EX["box-10"] = { e: "组合拳有节奏：1-2-3 是「快、快、稍重」，不是三拳一样重。打完组合要立刻改变位置或抬回防守，站在原地看自己打了什么，是最容易被反击的瞬间。", n: "每次打 3 拳组合，打完立刻退半步或侧移，养成习惯。" };
+window.EX["box-11"] = { e: "对方打过来，你可以挡住（挡：手在脸侧接住）也可以拍开（拍：用手掌把对方的拳往下拨）。格挡不费力但会退；拍击改变了对方来拳方向，能立刻反击。", n: "让同伴或影子慢速出直拳，练「挡 10 次、拍 10 次」。" };
+window.EX["box-12"] = { e: "闪躲是上身侧倾让拳擦过去，摇避是膝下沉、上身画个小弧把拳让过去。两个都要保持眼睛盯人，别低头闭眼——低头等于把手里的地图收起来。", n: "对镜子慢速做「下潜 8 次、侧闪 8 次」，全程眼睛看着前方同一点。" };
+window.EX["box-13"] = { e: "对方冲上来，你后脚先退、退完立刻打一拳再退——这就是后撤反击。只后退不还手，会一直被推到围绳上；退一步打一拳，对方就不敢一直压。", n: "空击「退一步 + 刺拳」连续 10 次，节奏是退、打、退、打。" };
+window.EX["box-14"] = { e: "远距离是手够不到、只能用脚进的距离；中距离是刺拳能碰到；近距离是勾拳和上勾拳的距离。在远距离打勾拳、在近距离打直拳，基本都打不实。", n: "站在沙袋前，前后挪三步，感受三种距离，各出对应的拳。" };
+window.EX["box-15"] = { e: "合法部位是头部正面与侧面、躯干正面与侧面；禁止打后脑、颈后、背部、裆部、腿部（多数规则里不能踢）。比赛里打后脑是严重犯规，训练中更要提前养成只打该打的地方。", n: "对练前先确认规则：能不能打身体、能不能低踢，护具戴齐。" };
+window.EX["box-16"] = { e: "沙袋练力量和耐力（它会晃，你要控制它）；手靶练准确和节奏（教练给你出手时机）；影子拳练动作和连贯（无阻力时最暴露动作毛病）。三种缺一种，技术就不完整。", n: "每次训练各留 5 分钟：影子拳热身、沙袋发力、手靶收尾。" };
+window.EX["box-17"] = { e: "跳绳练的是小腿弹性、手腕节奏和持续工作能力，正好对上拳击的「一回合三分钟」。新手常跳太高、全脚掌砸地，跳两分钟就喘。前脚掌轻点地、绳子过脚一次跳一下。", n: "从 30 秒跳 + 30 秒歇开始，做 5 组，别追求连跳 10 分钟。" };
+window.EX["box-18"] = { e: "影子拳是免费的私教：没有阻力、没有沙袋晃，动作哪里别扭一目了然。对着镜子打三分钟，你会发现自己某一拳总是掉手或者肩耸起来。", n: "每天 3 个回合、每回合 2 分钟，只对着镜子打，注意手的位置。" };
+window.EX["box-19"] = { e: "条件实战是限制规则的对抗：比如只许打刺拳、只许用前手、或者只能防守不能还手。它把复杂对抗拆成小块练，比直接放开打更容易练出东西也更安全。", n: "先练「只防守」和「只打刺拳」两种，力量控制在三成，戴好护具。" };
+window.EX["box-20"] = { e: "一个回合 3 分钟、歇 1 分钟，一场业余比赛三回合。如果你平时练 30 秒就歇，比赛第 2 分钟就会掉手、动作散。体能要按回合制来练。", n: "每周两次按「3 分钟动、1 分钟歇」做 3 回合，不追求强度，先撑满时间。" };
+window.EX["box-21"] = { e: "缠手是为了把腕骨和指关节固定住，不是越紧越好——缠太紧手会麻。护齿、护头、护裆按项目要求戴。新手最容易省的是缠手，最常伤的也是手腕。", n: "每次打沙袋或对练都缠手；缠完握拳试一下，手指不发麻、腕子不晃。" };
+window.EX["box-22"] = { e: "常见伤：手腕扭伤（没缠手或打空）、肩袖劳损（出拳不转体）、鼻子出血、脑震荡（对练挨重拳后头痛、恶心、看东西模糊）。脑震荡的红线是：头痛加重、呕吐、意识模糊、记不清刚才——立刻停，去看医生。", n: "头部受重击后当天不要再练；有头痛恶心就就医，别「忍一忍」。" };
+window.EX["box-23"] = { e: "业余（奥运体系）按体重分级、三回合、戴护头护具、以得点为主；职业回合多、护具少、以击倒和伤害为主。规则不同，训练重点也不同——业余更看重速度和准确。", n: "先确定你要打哪种：想比赛就问当地拳馆的业余赛事安排，别混着练。" };
+window.EX["box-24"] = { e: "第 1–4 周：站架、步法、1-2、跳绳，每周三次；5–8 周：加勾拳、组合拳、拍击闪躲；9–12 周：加条件实战和回合制体能。跳过前三周直接对练，是最容易受伤的路。", n: "前四周每次 40 分钟：热身 10 分 + 跳绳 5 分 + 技术 20 分 + 拉伸 5 分。" };
+
+window.EX = window.EX || {};
+window.EX["nut-01"] = { e: "体重变化像记账：吃进去多少千卡，用掉多少千卡。一天多吃 300 千卡（约一碗饭+一块肉），一年就是十来斤；少吃 300 千卡，体重慢慢往下走。不是某顿饭决定胖瘦，是总账。", n: "先别改饮食，只记录三天吃的东西，找出一两个「每天都有、又没必要」的热量来源。" };
+window.EX["nut-02"] = { e: "三大营养素的热量不一样：1 克蛋白 4 千卡、1 克碳水 4 千卡、1 克脂肪 9 千卡。同样重量的坚果和米饭，坚果热量是米饭的五倍多——这也是「吃得很健康却一直胖」的常见原因。", n: "记住 4/4/9 就够了。遇到包装食品直接看背面热量，别看广告词。" };
+window.EX["nut-03"] = { e: "一个 70 公斤的人，每天大约需要 100–130 克蛋白，相当于四个鸡蛋（约 24 克）+ 一块手掌大的鸡胸（约 40 克）+ 一杯牛奶（8 克）+ 一碗豆腐（约 15 克）。分三顿吃比一顿全吃光更利于利用。", n: "每顿先有「一掌心」的蛋白（肉、鱼、蛋、豆制品），三顿加起来就差不多。" };
+window.EX["nut-04"] = { e: "碳水是练得动的前提。练前 1–2 小时吃一碗米饭或一个馒头，血糖和肌糖原都在线；长期极低碳水时，同样的训练会觉得腿沉、脑子慢——那不是意志力问题，是燃料不足。", n: "把一天里较多的碳水放在训练前后那一顿，其余两顿稍微少一点。" };
+window.EX["nut-05"] = { e: "脂肪不是敌人：激素、吸收脂溶性维生素都靠它。长期每天低于每公斤体重 0.5 克脂肪（60 公斤的人不到 30 克），很多人会出现精力差、情绪低、皮肤干。不吃油炒菜、只吃水煮，反而常见问题。", n: "每天至少留一勺油 + 一份坚果/半个牛油果，别把脂肪吃到极低。" };
+window.EX["nut-06"] = { e: "纤维每天 25–30 克：一碗燕麦约 4 克、一个苹果约 3 克、一盘绿叶菜约 3 克。吃得少会便秘、饿得快；突然猛加又会胀气——加纤维要同时多喝水，分两周慢慢加。", n: "每天保证两拳头蔬菜 + 一份水果 + 一份全谷（燕麦/糙米/红薯）。" };
+window.EX["nut-07"] = { e: "尿液颜色是最便宜的指标：淡黄像柠檬水就差不多，深黄像苹果汁就该喝了。一小时高强度训练出汗一两升很常见，光喝白水可能越喝越没劲——出汗多时补点含钠的饮料或加点盐。", n: "训练前喝一杯水，训练中每 15–20 分钟喝几口，别等口渴。" };
+window.EX["nut-08"] = { e: "餐盘法：一半蔬菜、四分之一蛋白、四分之一主食，再来拇指大小一点油。不用称、不用算，照着摆盘就大概对。外卖也可以照这个比例点：一份肉、一份菜、一份饭。", n: "下一顿就按「半盘菜、四分一肉、四分一饭」摆一次，看看份量跟你平时的差别。" };
+window.EX["nut-09"] = { e: "每天缺口 300–500 千卡，一周掉 0.3–0.7 公斤比较稳；缺口 1000 千卡以上，掉得更快但更容易掉肌肉、掉精力、报复性吃回来。慢慢掉的人，最后更容易守住。", n: "先把目标定成每周掉 0.5 公斤（约每天少 500 千卡），做到两周再调。" };
+window.EX["nut-10"] = { e: "增肌只需要每天多吃 200–300 千卡（约一小碗饭+一杯奶），同时练得够。新手常以为要「吃到撑」，结果长的多是脂肪，之后还要花几个月减。", n: "增肌期每周称重 2–3 次，体重每周涨 0.2–0.4 公斤就是合适的节奏。" };
+window.EX["nut-11"] = { e: "训练前 1–2 小时吃点好消化的碳水（香蕉、面包），训练后 1–2 小时内吃一顿含蛋白的正餐。所谓「30 分钟窗口」没那么玄，全天蛋白吃够比卡点重要得多。", n: "练前一根香蕉或一片面包；练后正常吃一顿有肉有饭的饭。" };
+window.EX["nut-12"] = { e: "体重不用一年到头只减或只增：减 8–12 周 → 维持 4–8 周 → 再减或增。长期缺口不歇，身体会下调消耗（更饿、更懒、更容易掉肌肉）；中间插一段维持，反而走得远。", n: "先定 12 周减脂周期，结束后维持一个月，再决定下一步。" };
+window.EX["nut-13"] = { e: "每天称重会看到两三斤的上下跳——那是水分和食物重量，不是脂肪。正确姿势：每天早晨空腹称，取一周平均。取平均后，体重趋势才有意义。", n: "每天早晨上完厕所称一次，记下来，只看每周平均值的变化。" };
+window.EX["nut-14"] = { e: "一瓶啤酒约 150 千卡，三两白酒约 350 千卡，还常带着烧烤一起下肚；酒精还会让第二天训练发虚、睡眠变浅。外食不是不能吃，是别把「偶尔」变成「每周四次」。", n: "外食先点一份蛋白 + 一份菜；酒限在两杯以内，别空肚子喝。" };
+window.EX["nut-15"] = { e: "证据强的：肌酸、蛋白粉、咖啡因、维 D（缺乏时）、鱼油（吃得少时）。证据弱的：各种「燃脂丸」「排毒饮」「胶原蛋白增肌」。买之前先问：有没有独立研究支持，还是只有广告。", n: "先吃对饭；真要补，从肌酸和蛋白粉开始，其余先省下钱。" };
+window.EX["nut-16"] = { e: "植物蛋白单吃往往缺某几种氨基酸，搭配着吃就齐了：米饭+豆、面条+豆腐、玉米+豆类。素食者蛋白需求可以稍高一点（每公斤 1.4–1.8 克），补上 B12 和铁要留意。", n: "每顿至少有一种豆制品或豆类，别只靠青菜和米饭。" };
+window.EX["nut-17"] = { e: "减了一阵子，体重卡住不动、总觉得冷、懒得动、特别想吃——这是代谢适应，不是「你不够努力」。这时可以吃两周维持热量、增加走路、睡够，再继续减。", n: "平台超过三周：先吃两周维持量 + 每天多走 2000 步，再重新减。" };
+window.EX["nut-18"] = { e: "体脂压到很低时，常见代价是：性欲下降、怕冷、情绪差、睡不好、训练掉重量、女性月经紊乱。竞技需要可以短期承受，普通人没必要为了「看着精」付这个账。", n: "男性别长期低于 8%、女性别长期低于 16% 体脂；出现上述症状先吃回维持量。" };
+window.EX["nut-19"] = { e: "赛前快速减重（脱水、限制饮食）会明显影响力量和反应，青少年和业余选手不建议。真要减，赛前 2–4 周慢慢减，比赛前一天开始正常吃碳水，别在称重后暴食。", n: "业余比赛就按平时体重打，别为了降一个级别折腾身体。" };
+window.EX["nut-20"] = { e: "四大误区：不吃晚饭能瘦（总热量才是关键）；吃碳水会胖（吃太多才胖）；蛋白吃多伤肾（健康人无证据）；局部减脂（练腹不减肚子）。这些话流传广，是因为简单好记，不是因为对。", n: "遇到「某一种食物决定胖瘦」的说法，先看总热量和总量。" };
+window.EX["nut-21"] = { e: "抽筋常和疲劳、出汗多、钠钾流失有关，单纯「缺钙」不是主因。长时间出汗后只喝白水，可能越喝越抽——加点盐、喝含电解质饮料、吃点香蕉土豆更实际。", n: "训练超过一小时且大汗：水里加一点盐，或喝运动饮料；别只灌纯水。" };
+window.EX["nut-22"] = { e: "训练日碳水多一点、蛋白照常；休息日碳水可以少一点，但蛋白别减。很多人一休息就放开吃，结果一周的缺口两天补回去。", n: "休息日只减主食的一小部分，蛋白和蔬菜保持原量。" };
+window.EX["nut-23"] = { e: "80/20 法则：八成时间按计划吃，两成留给聚餐、甜点、想吃的。盯得太死的人，往往坚持三周就崩，然后反弹更多。能长期执行的「不完美方案」赢过坚持不了的完美方案。", n: "一周给自己留 2–3 次「随便吃」，其余时间照常，不用有罪恶感。" };
+window.EX["nut-24"] = { e: "该找专业人士的情况：有糖尿病、肾病、进食障碍史；备赛级减重；儿童生长发育问题；长期不明原因体重变化。网上模板不适用于这些情况，硬套可能有害。", n: "有以上任一情况，先找注册营养师或医生，别照抄网上的饮食计划。" };
+
+window.EX = window.EX || {};
+window.EX["ana-01"] = { e: "解剖学的方位是「以躺着的尸体为基准」：靠近头部是上、靠近脚是下、靠身体中线是内、远离中线是外。所以你的小指在外侧、大拇指在内侧——哪怕你把手举起来，说法也不变。", n: "记四个词：上/下、内/外、前/后。判断时先把手放回解剖位置（掌心朝前）再想。" };
+window.EX["ana-02"] = { e: "三个平面：矢状面把你切成左右两半（前后动作，比如深蹲、走）；额状面切成前后两半（左右动作，比如侧跳）；水平面切成上下两半（旋转，比如挥拳、拧腰）。大多数动作是三个平面组合。", n: "看一个动作先问：它在哪个平面为主？深蹲=矢状面，侧向弓步=额状面。" };
+window.EX["ana-03"] = { e: "关节类型决定你能做的动作：球窝关节（肩、髋）能多方向转；铰链关节（膝、肘）基本只能弯伸；车轴关节（颈椎上部、前臂）主要旋转。所以膝盖本来就「不擅长」左右转，硬拧就容易伤。", n: "训练时按关节本来的方向用力，别为了「花样」让关节做它不该做的动作。" };
+window.EX["ana-04"] = { e: "起点是肌肉靠近身体中心、动起来相对固定的那一端；止点是另一端，通常是被拉动的那块骨头。比如肱二头肌起点在肩前，止点在桡骨——它一收缩就把小臂抬起来。", n: "想知道一块肌肉干什么，就找它的止点：往哪走，就把哪端拉过来。" };
+window.EX["ana-05"] = { e: "向心是肌肉变短（举起重物），离心是变长还在发力（慢慢放下），等长是不变长也不变短（平板支撑、蹲住不动）。同一个动作三种都在用，下放那一段离心最伤也最能长。", n: "每个动作的下放数 2 秒，给离心一点尊重。" };
+window.EX["ana-06"] = { e: "骨头是硬的支架，关节是两块骨头接触的地方，软骨是关节面上的「减震垫」，软骨没有血管，靠挤压吸收营养——所以不动反而更差，适量活动能「喂」它。", n: "膝盖、肩膀不舒服时，别完全不动；改成小幅度、无痛范围内的活动。" };
+window.EX["ana-07"] = { e: "一个运动神经管一组肌纤维，叫运动单位。要举起重物，身体先叫小的运动单位，再叫大的——所以轻重量练不到「大」的那些纤维。想练力量，得有足够大的负荷才叫得动它们。", n: "想练力量就把重量加到能做 5–8 次；一直做 30 次小重量不会变大力。" };
+window.EX["ana-08"] = { e: "筋膜是包在肌肉外面的网，把肌肉、骨头、器官连成一整套张力系统。拉伸时的那种「整条腿后侧都紧了」，多是筋膜的传导。但「筋膜粘连要揉开」这类说法证据很弱：目前看更多是神经系统调节，不是真的黏住了。", n: "把泡沫轴当放松手段用可以，别指望靠它「揉开粘连」治病。" };
+window.EX["ana-09"] = { e: "胸大肌从胸骨一路连到上臂骨，它一收缩就把手臂往身体前面拉——推、抱、拍。所以卧推是胸大肌的主场；而圆肩含胸，往往是胸这侧太紧、背那侧太弱。", n: "练推的动作（卧推、俯卧撑）后，拉的动作（划船、面拉）至少要等量做。" };
+window.EX["ana-10"] = { e: "背阔肌是从腰背一路连到上臂的大扇子，它把手臂往身体两侧后方拉。引体向上、下拉、划船都靠它。它紧的时候，手举过头会不自觉塌腰——这就是为什么练肩也要松背阔。", n: "每周至少做一次引体或下拉，量不少于卧推；举过头前先拉一拉背阔。" };
+window.EX["ana-11"] = { e: "三角肌三束各管一段：前束把手臂往前抬（推），中束往侧抬（侧平举），后束往后拉（面拉）。多数人前束练太多、后束几乎不练——这也是肩膀圆、肩前痛的常见来源。", n: "每周给后束单独留 2–3 组（面拉或俯身飞鸟）。" };
+window.EX["ana-12"] = { e: "肱二头肌让肘弯、还带一点前臂旋转（拧螺丝的动作）；肱三头肌让肘伸直，占上臂后侧大部分体积。想让手臂粗，三头的份量往往比二头更大。", n: "练手臂时二头三头都练，三头至少做两组不同的（过头伸展 + 下压）。" };
+window.EX["ana-13"] = { e: "股四头肌在大腿前面，伸膝；臀大肌在屁股上，伸髋（把身体往前推、站起来）。深蹲、上楼梯、从椅子上起来都要两者配合。很多人「蹲不起来」不是腿没力，是髋不会用。", n: "练腿别只做腿屈伸，深蹲/臀桥/上台阶都要有，让髋也参与。" };
+window.EX["ana-14"] = { e: "腘绳肌在大腿后侧，管屈膝和伸髋，所以硬拉、罗马尼亚硬拉这类「髋往后走」的动作对它刺激最大；腿弯举只练屈膝那一部分。腘绳肌拉伤多发生在冲刺和快速伸展时。", n: "每周至少做一次罗马尼亚硬拉或腿弯举，冲刺前充分热身。" };
+window.EX["ana-15"] = { e: "小腿三头肌包括腓肠肌（膝盖伸直时最有力）和比目鱼肌（屈膝时也工作）。所以站姿提踵练前者、坐姿提踵练后者，两个都要有。它连到跟腱，跟腱炎往往和小腿力量不足有关。", n: "站姿提踵 3 组 + 坐姿提踵 3 组，每周两次，慢慢加次数。" };
+window.EX["ana-16"] = { e: "腹直肌是前面的「六块」，管躯干前屈；腹斜肌在两侧，管旋转和侧屈；腹横肌在最深层，像一条腰带管腹压。搬重物时先绷住腹压（呼气收腹），腰才稳。", n: "练核心三层各来一个：卷腹（前）、侧桥（侧）、死虫（深层的抗旋转）。" };
+window.EX["ana-17"] = { e: "肩袖是四块小肌肉，像四个手指把上臂骨头按在关节窝里。它不负责大力量，负责「稳住」。卧推重量上得太快、或者长期只练大肌群，肩袖跟不上，就会出现抬手中段疼痛。", n: "每周 2 次外旋练习（弹力带，每侧 2 组 15 次），重量宁轻不求重。" };
+window.EX["ana-18"] = { e: "膝关节主要做弯伸，前后由交叉韧带稳定、两侧由侧副韧带稳定。它最怕「一边弯一边扭」——这也是为什么变向落地时容易伤十字韧带。膝盖超过脚尖本身不是罪，失控的内扣才是。", n: "蹲和落地时盯住膝盖方向对着第二脚趾，别让它往里塌。" };
+window.EX["ana-19"] = { e: "腰椎本身能弯、能转，但不擅长在负重下反复弯。髋铰链就是学着「让髋来弯、让腰保持中立」——搬箱子、捡东西、硬拉都是这个动作。腰伤的人，多数是弯腰提重而不是屈髋。", n: "搬东西先蹲一点、屁股往后、背保持直，重物贴身体。" };
+window.EX["ana-20"] = { e: "骨盆前倾只是姿势的一种，很多人天生就是，没痛就不需要「矫正」。真正要处理的是：久坐导致的髋前侧紧、臀肌不用力，以及你搬重物时会不会塌腰。盯着镜子硬「收骨盆」往往越练越僵。", n: "与其纠结前倾角度，不如每周练两次臀桥 + 髋前侧拉伸，把动作做好。" };
+window.EX["ana-21"] = { e: "一块肌肉不干活，另一块就替它干——这叫代偿。比如臀肌不出力，腰和腘绳肌就替它顶；肩袖不稳，斜方肌就耸肩帮忙。代偿短期能完成任务，长期就是「练完总有一处酸痛」的来源。", n: "哪个动作总是同一处酸、其他部位没感觉，就降重量重学这个动作。" };
+window.EX["ana-22"] = { e: "静态拉伸（一个姿势保持 30 秒）适合训练后或单独做，训练前做太久反而会短暂降低力量；动态拉伸（摆腿、绕臂、弓步走）适合热身。练前动起来，练后静下来。", n: "训练前做 5 分钟动态热身；静态拉伸放到训练后，每个部位 30 秒 × 2。" };
+window.EX["ana-23"] = { e: "运动链是力量传递的路线：脚蹬地 → 小腿 → 大腿 → 髋 → 躯干 → 肩 → 手臂 → 拳。中间任何一环漏力，末端就变小。这就是为什么拳击要练腿和核心，而不只是练手臂。", n: "做投掷或出拳类动作时，先想「从脚到手」的顺序，别只用手臂发力。" };
+window.EX["ana-24"] = { e: "疼痛不等于组织坏了：很多腰痛的人拍片没有明显异常，很多有异常的人却完全不痛。疼痛更像警报系统的灵敏度被调高了——休息、渐进活动、睡好，往往比「找地方按开」有效。", n: "痛的时候别硬撑也别完全不动，改成小幅度、无痛范围内的活动，多数几天会缓解。" };
+
+window.EX = window.EX || {};
+window.EX["kid-01"] = { e: "三条底线讲的是：孩子不是小一号的大人。同样的 20 公斤杠铃，对成年人是热身，对 10 岁孩子可能是极限；同样一次撞头，对孩子的影响比成人更大。所以「跟着大人练」是最常见的错误起点。", n: "带孩子练之前先记住三句话：重量要更轻、量要更少、头部和脊柱要更保护。" };
+window.EX["kid-02"] = { e: "0–3 岁不需要「训练课」，需要的是趴、爬、滚、抓、站。每天在地上爬二十分钟的孩子，肩背和核心的底子比上十节早教课更扎实。这个阶段的目标是「动作够多」，不是「动作标准」。", n: "每天给孩子 20–30 分钟自由在地上爬、滚、追，别长时间绑在推车或座椅里。" };
+window.EX["kid-03"] = { e: "3–6 岁该练的是 ABC：敏捷（Agility）、平衡（Balance）、协调（Coordination）。单脚站、跳格子、接球、走平衡木——这些看着像玩，其实是在给神经系统装「驱动程序」。这个阶段上专项课（只练一个项目）反而浪费。", n: "每周安排 3 次「玩着动」：跳格子 10 分钟、单脚站比赛、抛接球。" };
+window.EX["kid-04"] = { e: "7–9 岁是协调和速度的黄金窗口：跳绳、短距离冲刺、变向跑、球类，学得快、忘得慢。但这个年龄骨骼还在长，别急着上大重量——先让身体学会「怎么动」，再谈「动多重」。", n: "每周 3 次、每次 20 分钟：跳绳、折返跑、接球，玩到出汗就好。" };
+window.EX["kid-05"] = { e: "10–12 岁可以开始力量启蒙，但用自重和轻器械：俯卧撑、深蹲、引体（可辅助）、弹力带。研究里这个年龄段做规范抗阻训练是安全的，前提是动作对、重量轻、有人看着——不是「小孩不能练力量」。", n: "从自重开始：深蹲 2 组 8 次、俯卧撑（可跪姿）2 组 5–8 次，每周 2 次。" };
+window.EX["kid-06"] = { e: "13–15 岁身高猛涨，骨头长得比肌肉快，常见结果是「动作突然变笨」、膝盖痛、协调下降。这不是退步，是身体在重新适配。这时要减少高冲击量、增加技术与柔韧，别硬冲成绩。", n: "这阶段把训练重点放在动作质量和技术，跳跃类每周不超过 2 次、每次少量。" };
+window.EX["kid-07"] = { e: "16–18 岁身体接近成人，可以逐步加入正规力量训练，但仍要循序渐进：先把深蹲、硬拉、卧推的技术练对，再慢慢加重量。青少年运动损伤里，很大一部分来自「重量加太快」。", n: "重量每次只加 2.5–5%，动作变形就退回上一档。" };
+window.EX["kid-08"] = { e: "同班两个 13 岁男孩，一个已经变声长个，一个还没发育——他们的「生物年龄」可能差三岁。用同一个标准要求他们，对晚发育的那个不公平也容易受伤。看发育迹象（变声、体毛、生长突增）比看日历年龄更准。", n: "别拿孩子和同龄人比成绩；用他自己的进步（上月 vs 这月）当标准。" };
+window.EX["kid-09"] = { e: "国际共识（如 NSCA、AAP 立场）都支持：规范监督下的抗阻训练对儿童青少年安全且有益，能提高力量、骨密度、运动表现和自信。真正危险的是动作错误、器械无人看管、盲目冲大重量。", n: "找有青少年训练经验的教练，先教动作、再谈重量；没有教练时只用自重。" };
+window.EX["kid-10"] = { e: "自重动作库就够用很久：深蹲、箭步蹲、臀桥、俯卧撑（可跪姿/靠墙）、平板支撑、悬垂、跳箱（低）、熊爬。这些不需要器械，也不怕压坏生长板，练好了再谈加重量。", n: "选 5 个动作，每周 2 次，每个 2 组，做到动作稳、不抖。" };
+window.EX["kid-11"] = { e: "落地是孩子最容易受伤的瞬间：从跳箱跳下、打球落地，如果膝盖往里塌、落地很响，长期就会膝盖痛。教「轻落地」——屈髋屈膝、膝盖对脚尖、落地几乎没声音，比多跳十次更有价值。", n: "每次跳跃练习后加 3 次「安静落地」：跳下、屈膝缓冲、不出声。" };
+window.EX["kid-12"] = { e: "GPP（一般身体准备）就是「什么都玩一点」：跑、跳、投、爬、平衡、球类。12 岁前广泛接触多种运动的孩子，后期专项成绩往往更好，受伤和倦怠也更少——早期只练一项反而限制发展。", n: "一年里至少让孩子接触 3 种不同运动，别 8 岁就定死一个项目。" };
+window.EX["kid-13"] = { e: "孩子天生柔韧，不需要每天压腿。真正要练的是「在需要的时候能到位」——比如踢球前动态摆腿、深蹲到底。长期被动硬压（尤其压膝盖、压腰）反而可能伤关节。", n: "热身用动态动作（摆腿、弓步走），静态拉伸放到运动后，每次 20–30 秒。" };
+window.EX["kid-14"] = { e: "孩子的心肺适能靠「玩到喘」来练：追跑、骑车、游泳、球类。每天至少 60 分钟中高强度活动是普遍建议；分成几段也算，不用一口气跑完。", n: "每天凑够 60 分钟「喘起来」的活动，可以拆成 3 段各 20 分钟。" };
+window.EX["kid-15"] = { e: "膝盖下方鼓起一个痛包（Osgood-Schlatter）或脚后跟痛（Sever），常见于 10–14 岁爱跑跳的孩子——是生长板和肌腱牵拉引起的，多数会随发育自愈。不是「骨头坏了」，但需要减量，不是硬扛。", n: "痛的时候减少跑跳 2–4 周、改成骑车游泳；持续加重或明显肿胀要就医。" };
+window.EX["kid-16"] = { e: "孩子出汗比成人多、体温升得更快，夏天训练容易脱水。一个 10 岁孩子踢一小时球，可能掉 0.5–1 公斤水分。等到「口渴」才喝往往已经晚了。", n: "训练前喝半杯水，每 15–20 分钟喝几口；练完看尿色，深黄就继续补。" };
+window.EX["kid-17"] = { e: "格斗类项目对孩子的风险主要在头：反复撞击、被重击后继续练，会影响学习和情绪。规范的做法是「疑似脑震荡就下场、当天不再练」，需要几天到几周分级重返，而不是「忍一忍接着打」。", n: "孩子被击到头后出现头痛、头晕、恶心、反应慢，立即停练并就医。" };
+window.EX["kid-18"] = { e: "书包太重（超过体重 10–15%）加上单肩背，容易造成姿势不对称和颈肩不适。脊柱侧弯则不是书包压出来的——它多是发育性的，用 Adam 前屈试验（弯腰看背部是否一边高）能初步筛查。", n: "书包用双肩、重量控制在体重 10% 以内；每半年做一次弯腰看背的检查。" };
+window.EX["kid-19"] = { e: "长时间低头看屏幕，孩子容易出现颈肩酸、圆肩。但现有证据只能说明「相关」，不能证明屏幕直接压弯了脊柱。真正有效的做法是：每小时起来动 5 分钟、把屏幕抬高到眼睛高度。", n: "设个闹钟：每 40–60 分钟起来走 5 分钟，屏幕垫高到眼睛平视。" };
+window.EX["kid-20"] = { e: "孩子超重不该用成人那套「节食减重」：正在长身体，限制热量可能影响长个和发育。更稳的做法是「长高追体重」——保持体重、让孩子继续长高，同时增加活动、减少含糖饮料。", n: "把甜饮料换成水、每天多 30 分钟活动，别让孩子称体重算热量。" };
+window.EX["kid-21"] = { e: "儿童补剂市场很热，但大多数（增肌粉、燃脂丸、各种「长高素」）没有证据支持，有的还含违禁成分。真正需要补的通常只有：确诊缺乏的维生素 D、贫血时的铁。蛋白粉在饮食够的情况下也没必要。", n: "孩子吃补剂前先问医生；正常吃饭的孩子通常什么都不用补。" };
+window.EX["kid-22"] = { e: "睡眠是长个和长力气的主场：6–12 岁建议 9–12 小时，13–18 岁 8–10 小时。长期少睡的孩子，反应慢、情绪差、受伤风险高，练得多也长不快。", n: "固定睡觉时间，睡前一小时不看屏幕；周末别补觉超过 1 小时以免打乱节奏。" };
+window.EX["kid-23"] = { e: "孩子练得好不好，很大程度取决于大人怎么反馈。说「你今天深蹲比上周稳」比说「你怎么这么笨」有用得多；赛场上大喊指挥，往往让孩子更紧张、更容易失误。", n: "每次只夸一个具体的动作细节；比赛时少喊指令，赛后让孩子先说自己的感受。" };
+window.EX["kid-24"] = { e: "8–18 岁的 12 周路线可以很朴素：每周 2 次力量（自重为主）+ 2 次跑跳或球类 + 每天 60 分钟活动 + 睡够。第四周、第八周各减量一周。这套安排不需要器械，也不影响长个。", n: "把这个节奏写进日历，先执行四周；孩子喊累就减量，别硬加。" };
+
+</script>
+<script>
+/* 四课学习中心 · 引擎 */
+(function () {
+  "use strict";
+  var KEY = "sike.v1";
+  var IV = [1, 2, 4, 7, 15, 30];           // box 1..6 对应间隔天数
+  var SUBS = [
+    { s: "健身", c: "#ff9f43" },
+    { s: "拳击", c: "#ff5b6e" },
+    { s: "营养", c: "#4ade80" },
+    { s: "解剖", c: "#a78bfa" },
+    { s: "儿童", c: "#38bdf8" }
+  ];
+  var SUBCOLOR = {};
+  SUBS.forEach(function (x) { SUBCOLOR[x.s] = x.c; });
+  var CARDS = (window.CARDS || []).slice();
+  // 选项位置打散：源卡里正确答案多集中在 B，按 id 做确定性洗牌，
+  // 保证同一张卡每次顺序一致（不会今天 B 明天 C），但整体分布均匀。
+  CARDS.forEach(function (c) {
+    var seed = 0;
+    for (var k = 0; k < c.id.length; k++) seed = (seed * 31 + c.id.charCodeAt(k)) % 100000;
+    function rnd() { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; }
+    var order = [0, 1, 2];
+    for (var i = 2; i > 0; i--) {
+      var j = Math.floor(rnd() * (i + 1));
+      var t = order[i]; order[i] = order[j]; order[j] = t;
+    }
+    var oldO = c.q.o, oldI = c.q.i;
+    c.q.o = order.map(function (x) { return oldO[x]; });
+    c.q.i = order.indexOf(oldI);
+  });
+  var MAP = {};
+  CARDS.forEach(function (c) { MAP[c.id] = c; });
+
+  /* ---------- 证据与元信息 ---------- */
+  var EVID = window.EVID || {}, KEYM = window.KEY || {}, UPDM = window.UPD || {}, FRESH = window.FRESH || [];
+  var HOOKM = window.HOOK || {};
+  var EXM = window.EX || {};
+  function egHtml(c) {
+    var x = EXM[c.id];
+    if (!x) return "";
+    var h = '<div class="eg"><div class="egk">举个例子</div><div class="egt">' + esc(x.e) + "</div>";
+    if (x.n) h += '<div class="nb"><b>新手先这样　</b>' + esc(x.n) + "</div>";
+    return h + "</div>";
+  }
+  var VER = window.VER || { v: "2026.11", d: "2026-11-24" };
+  function hookHtml(c) {
+    var h = HOOKM[c.id];
+    if (!h) return "";
+    return '<div class="hook"><span class="hk">记住这句</span><span class="ht">' + esc(h) + "</span></div>";
+  }
+  function ring(pct, big, small) {
+    var r = 46, cir = 2 * Math.PI * r;
+    var p = Math.max(0, Math.min(100, Math.round(pct)));
+    var off = cir * (1 - p / 100);
+    return '<div class="ringwrap"><svg class="ring" viewBox="0 0 110 110" aria-hidden="true">' +
+      '<circle class="rbg" cx="55" cy="55" r="' + r + '"/>' +
+      '<circle class="rfg" cx="55" cy="55" r="' + r + '" stroke-dasharray="' + cir.toFixed(1) +
+      '" stroke-dashoffset="' + off.toFixed(1) + '"/></svg>' +
+      '<div class="rlabel"><b>' + big + "</b><span>" + small + "</span></div></div>";
+  }
+  function evOf(c) {
+    if (c.ev) return [c.ev, c.ref || ""];
+    if (EVID[c.id]) return EVID[c.id];
+    return ["B", ""];
+  }
+  function evHtml(c) {
+    var e = evOf(c);
+    return '<span class="ev e' + e[0] + '" data-tip="' + esc(e[1] || "未标注依据") + '">证据 ' + e[0] + "</span>";
+  }
+  function evNote(c) {
+    var e = evOf(c);
+    return '<div class="ev-note"><b>依据</b>　' + esc(e[1] || "未标注") +
+      '　<span class="dim2">A 强证据 / B 中等 / C 有限</span></div>';
+  }
+  function ageHtml(c) { return c.age ? '<span class="age">' + esc(c.age) + " 岁</span>" : ""; }
+  function updHtml(c) { var y = UPDM[c.id]; return y ? '<span class="upd">↑ ' + y + " 更新</span>" : ""; }
+  function metaRow(c) {
+    var h = '<div class="metarow">' + evHtml(c) + ageHtml(c) + updHtml(c);
+    if (KEYM[c.id]) h += '<span class="key-mark">必会</span>';
+    return h + "</div>";
+  }
+  var AGES = (function () {
+    var seen = {}, out = [];
+    CARDS.forEach(function (c) { if (c.age && !seen[c.age]) { seen[c.age] = 1; out.push(c.age); } });
+    out.sort(function (a, b) { return parseInt(a, 10) - parseInt(b, 10); });
+    return out;
+  })();
+
+  /* ---------- 日期 ---------- */
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+  function dstr(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function today() { return dstr(new Date()); }
+  function addDays(s, n) {
+    var p = s.split("-").map(Number);
+    var d = new Date(p[0], p[1] - 1, p[2] + n);
+    return dstr(d);
+  }
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (m) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m];
+    });
+  }
+
+  /* ---------- 状态 ---------- */
+  function blankState() {
+    return {
+      v: 1,
+      cards: {},
+      log: {},
+      streak: { last: "", days: 0 },
+      settings: { newPerDay: 3 },
+      created: today()
+    };
+  }
+  var S = load();
+
+  function load() {
+    var d = blankState();
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (!raw) return d;
+      var o = JSON.parse(raw);
+      if (o && typeof o === "object") {
+        if (o.cards) d.cards = o.cards;
+        if (o.log) d.log = o.log;
+        if (o.streak) d.streak = o.streak;
+        if (o.settings) d.settings = Object.assign(d.settings, o.settings);
+        if (o.created) d.created = o.created;
+      }
+    } catch (e) { /* 坏数据就当新的 */ }
+    return d;
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast("保存失败：浏览器存储被禁用"); }
+  }
+  function st(id) {
+    if (!S.cards[id]) S.cards[id] = { box: 0, due: null, seen: 0, ok: 0, bad: 0, lapses: 0, note: "", last: null };
+    return S.cards[id];
+  }
+  function logOf(d) {
+    if (!S.log[d]) S.log[d] = { new: 0, rev: 0, ok: 0, bad: 0 };
+    return S.log[d];
+  }
+
+  /* ---------- 队列 ---------- */
+  function dueList() {
+    var t = today();
+    return CARDS.filter(function (c) {
+      var s = S.cards[c.id];
+      return s && s.box > 0 && s.due && s.due <= t;
+    }).sort(function (a, b) {
+      return (S.cards[a.id].due < S.cards[b.id].due) ? -1 : 1;
+    });
+  }
+  function freshList() {
+    return CARDS.filter(function (c) {
+      var s = S.cards[c.id];
+      return !s || s.box === 0;
+    }).sort(function (a, b) {
+      var oa = SUBS.findIndex(function (x) { return x.s === a.s; });
+      var ob = SUBS.findIndex(function (x) { return x.s === b.s; });
+      return (a.lv - b.lv) || (oa - ob) || (a.id < b.id ? -1 : 1);
+    });
+  }
+  function newRoom() {
+    var t = today();
+    var done = S.log[t] ? S.log[t].new : 0;
+    return Math.max(0, S.settings.newPerDay - done);
+  }
+  function queue() {
+    return { due: dueList(), fresh: freshList().slice(0, newRoom()) };
+  }
+
+  /* ---------- 会话 ---------- */
+  var view = "home";
+  var sess = null;
+  var filters = { q: "", sub: "all", state: "all", age: "all" };
+  var openId = null;
+
+  var EXTRA = 5;
+  function startSession(mode, n) {
+    var items = [];
+    var k = n || 0;
+    if (mode === "free") {
+      var pool = CARDS.filter(function (c) { var s = S.cards[c.id]; return s && s.box > 0; });
+      if (!pool.length) pool = CARDS.slice();
+      pool = pool.sort(function () { return Math.random() - 0.5; }).slice(0, k || 10);
+      pool.forEach(function (c) { items.push({ id: c.id, type: "rev" }); });
+    } else if (mode === "more") {
+      k = k || EXTRA;
+      freshList().slice(0, k).forEach(function (c) { items.push({ id: c.id, type: "new" }); });
+      var room = k - items.length;
+      if (room > 0) dueList().slice(0, room).forEach(function (c) { items.push({ id: c.id, type: "rev" }); });
+      if (!items.length) {
+        CARDS.slice().sort(function (a, b) { return (st(a.id).due || "") < (st(b.id).due || "") ? -1 : 1; })
+          .slice(0, k).forEach(function (c) { items.push({ id: c.id, type: "rev" }); });
+      }
+    } else {
+      dueList().slice(0, 40).forEach(function (c) { items.push({ id: c.id, type: "rev" }); });
+      queue().fresh.forEach(function (c) { items.push({ id: c.id, type: "new" }); });
+    }
+    if (!items.length) { toast("今天没有任务，试试自由复习"); return; }
+    sess = { items: items, i: 0, answered: false, picked: -1, stage: "read", results: [] };
+    if (items[0].type === "rev") sess.stage = "quiz";
+    view = "study";
+    render();
+  }
+
+  function cur() { return sess.items[sess.i]; }
+
+  function answer(idx) {
+    if (!sess || sess.stage !== "quiz" || sess.answered) return;
+    if (idx !== 0 && idx !== 1 && idx !== 2) return;
+    var it = cur(); var c = MAP[it.id]; var s = st(c.id);
+    var t = today(); var lg = logOf(t);
+    sess.answered = true; sess.picked = idx;
+    var ok = idx === c.q.i;
+    s.seen = (s.seen || 0) + 1; s.last = t;
+    if (ok) {
+      s.ok = (s.ok || 0) + 1;
+      s.box = Math.min((s.box || 0) + 1, 6);
+      s.due = addDays(t, IV[s.box - 1]);
+      lg.ok++;
+    } else {
+      s.bad = (s.bad || 0) + 1;
+      s.lapses = (s.lapses || 0) + 1;
+      s.box = 1;
+      s.due = addDays(t, 1);
+      lg.bad++;
+    }
+    if (it.type === "new") lg.new++; else lg.rev++;
+    sess.results.push({ id: c.id, ok: ok });
+    recordStudy();
+    save();
+    render(); // 重绘以显示反馈（保留 answered 状态）
+  }
+
+  function recordStudy() {
+    var t = today();
+    if (S.streak.last === t) return;
+    if (S.streak.last === addDays(t, -1)) S.streak.days = (S.streak.days || 0) + 1;
+    else S.streak.days = 1;
+    S.streak.last = t;
+  }
+
+  function nextCard() {
+    if (!sess.answered && sess.stage === "quiz") { toast("先选一个答案"); return; }
+    sess.i++;
+    sess.answered = false; sess.picked = -1;
+    if (sess.i >= sess.items.length) { sess.done = true; render(); return; }
+    sess.stage = sess.items[sess.i].type === "new" ? "read" : "quiz";
+    render();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  /* ---------- 计算 ---------- */
+  function mastery(sub) {
+    var list = CARDS.filter(function (c) { return !sub || c.s === sub; });
+    var m = list.filter(function (c) { var s = S.cards[c.id]; return s && s.box >= 3; }).length;
+    var started = list.filter(function (c) { var s = S.cards[c.id]; return s && s.box > 0; }).length;
+    return { m: m, started: started, total: list.length };
+  }
+  function todayStat() {
+    var lg = logOf(today());
+    var n = lg.ok + lg.bad;
+    return { n: n, acc: n ? Math.round(lg.ok / n * 100) : 0, neu: lg.new, rev: lg.rev };
+  }
+
+  /* ---------- 渲染 ---------- */
+  var app;
+  function render() {
+    app = document.getElementById("app");
+    if (view === "study" && sess) app.innerHTML = sess.done ? viewDone() : viewStudy();
+    else if (view === "lib") app.innerHTML = viewLib();
+    else if (view === "skim") app.innerHTML = viewSkim();
+    else if (view === "stats") app.innerHTML = viewStats();
+    else app.innerHTML = viewHome();
+    document.querySelectorAll("[data-tab]").forEach(function (b) {
+      b.classList.toggle("on", b.getAttribute("data-tab") === view);
+    });
+    syncSheet();
+  }
+
+  function dot(s) { return SUBCOLOR[s] || "#888"; }
+  function tag(s) {
+    return '<span class="tag" style="color:' + dot(s) + ';background:' + dot(s) + '1f">' + s + "</span>";
+  }
+
+  function restTip() {
+    var n = todayStat().n;
+    if (n < 24) return "";
+    return '<div class="hook rest"><span class="hk">今天的量够了</span><span class="ht">你已经学了 ' + n +
+      " 张。这时候再刷，边际收益明显下降——记忆主要在睡眠里巩固，明早再来一遍比现在硬撑更牢。</span></div>";
+  }
+
+  function viewHome() {
+    var q = queue();
+    var n = q.due.length + q.fresh.length;
+    var ts = todayStat();
+    var ma = mastery(null);
+    var html = "";
+    var doneN = ts.n, tgt = ts.n + n;
+    var pct = tgt ? doneN / tgt * 100 : 100;
+    html += '<div class="card hero">';
+    html += '<div class="row hero-top"><span class="chip"><span class="dot" style="background:var(--acc)"></span>今日任务</span>' +
+      '<span class="spacer"></span><span class="dim2" style="font-size:12.5px">' + today() + "</span></div>";
+    html += '<div class="hero-main"><div class="hero-txt">';
+    if (n > 0) {
+      html += '<div class="h1">今天还有 <em class="bignum">' + n + "</em> 张</div>";
+      html += '<div class="muted">新卡 <b class="c-fit">' + q.fresh.length + '</b> 张 · 到期复习 <b class="c-acc">' + q.due.length + "</b> 张</div>";
+    } else {
+      html += '<div class="h1">今天的任务已完成 ✓</div>';
+      html += '<div class="muted">想加练？可以自由复习，或去卡片库翻专题。</div>';
+    }
+    html += '<div class="stat">' +
+      '<div><div class="k">连续打卡</div><div class="v">' + (S.streak.days || 0) + '<span class="u"> 天</span></div></div>' +
+      '<div><div class="k">已掌握</div><div class="v">' + ma.m + '<span class="u">/' + ma.total + "</span></div></div>" +
+      '<div><div class="k">今日已学</div><div class="v">' + ts.n + "</div></div>" +
+      '<div><div class="k">今日正确率</div><div class="v">' + (ts.n ? ts.acc + '<span class="u">%</span>' : "—") + "</div></div>" +
+      "</div>";
+    html += "</div><div class=\"hero-ring\">" + ring(pct, doneN + "/" + tgt, "今日完成") + "</div></div>";
+    html += '<div style="margin-top:16px">';
+    if (n > 0) {
+      html += '<button class="btn primary wide" data-act="start">开始今天的学习 →</button>';
+      html += '<div style="height:8px"></div><button class="btn wide ghost" data-act="more">还有劲？继续学 5 张</button>';
+    } else {
+      html += '<button class="btn primary wide" data-act="more">还有劲？继续学 5 张</button>';
+      html += '<div style="height:8px"></div><button class="btn wide ghost" data-act="free">自由复习 10 张</button>';
+    }
+    html += "</div>";
+    html += '<div class="hint">今日新卡额度 <span class="kbd">' + (S.settings.newPerDay >= 999 ? "不限" : S.settings.newPerDay) +
+      '</span> 张（今天还可学 <span class="kbd">' + newRoom() + '</span> 张，全书还剩 <span class="kbd">' + freshList().length +
+      '</span> 张没学）。额度用完也能点「继续学」随时加练。节奏去「数据」页调。</div>';
     html += "</div>";
 
     // 四科进度
