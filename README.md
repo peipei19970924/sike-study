@@ -160,8 +160,11 @@ sike-study/
 ├── shots/              ← 界面截图与截图用的临时页
 ├── tools/              ← 部署/调试辅助脚本（平时用不到）
 └── src/
-    ├── data-fit.js  data-box.js  data-nut.js  data-nut2.js  data-ana.js  data-kid.js
-    ├── ex-fit.js  ex-box.js  ex-nut.js  ex-nut2.js  ex-ana.js  ex-kid.js  ← 例子 + 新手做法
+    ├── data-fit.js  data-fit2.js  data-box.js  data-box2.js  data-nut.js  data-nut2.js  data-nut3.js
+    ├── data-ana.js  data-ana2.js  data-kid.js  data-kid2.js        ← 卡片（含 L4 进阶）
+    ├── ex-fit.js  ex-fit2.js  ex-box.js  ex-box2.js  ex-nut.js  ex-nut2.js  ex-nut3.js
+    ├── ex-ana.js  ex-ana2.js  ex-kid.js  ex-kid2.js                ← 例子 + 新手做法
+    ├── logo.svg        ← 顶栏品牌标（塑形魔方的橙色立方，来自品牌标识 SVG）
     ├── meta.js         ← 证据等级 / 必会卡 / 更新年份 / 前沿速递 / 记忆钩子 / 版本
     ├── app.js          ← 学习引擎（排程、自测、统计、备份）
     ├── app.css         ← 样式（含手机适配）
